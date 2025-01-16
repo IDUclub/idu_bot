@@ -1,3 +1,6 @@
-/.venv
-/.idea
-*.ipynb
+.idea
+DECFILE
+*.crt
+*.docx
+.env.*
+venv

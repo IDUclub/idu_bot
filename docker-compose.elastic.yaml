@@ -1,0 +1,32 @@
+services:
+  elasticsearch:
+    image: elasticsearch:8.16.1
+    container_name: elasticsearch
+    volumes:
+      - 'data_es:/usr/share/elasticsearch/data'
+    environment:
+      - discovery.type=single-node
+      - CLI_JAVA_OPTS=-Xms2g -Xmx2g
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    ports:
+      - '9300:9200'
+    networks:
+      - esnet
+  kibana:
+    image: kibana:8.16.1
+    container_name: kibana
+    environment:
+      - 'ELASTICSEARCH_HOSTS=http://elasticsearch:9200'
+      - 'XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=d1a66dfd-c4d3-4a0a-8290-2abcb83ab3aa'
+    ports:
+      - '5701:5601'
+    networks:
+      - esnet
+
+volumes:
+  data_es:
+    driver: local
+networks:
+  esnet: null
