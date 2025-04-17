@@ -19,7 +19,7 @@ EXPOSE 8000
 
 # Run the application.
 RUN echo "cd /app" > /app/entrypoint.sh && \
-    echo "python -m gunicorn src.app:app --bind=0.0.0.0:8000 --timeout 0" >> /app/entrypoint.sh
+    echo "python -m gunicorn -k uvicorn.workers.UvicornWorker src.app:app --bind=0.0.0.0:8000 --timeout 0" >> /app/entrypoint.sh
 
 RUN chmod +x /app/entrypoint.sh
 

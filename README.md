@@ -10,4 +10,4 @@ The same for telegram bot credentials.
 finally, start fastapi app locally or run from docker with command:
 docker-compose -f docker-compose.app.yaml up
 
-interactive api docs are availale on localhost:8000
+interactive api docs are available on localhost:8000
