@@ -1,5 +1,6 @@
 import io
 
+from docx import Document
 from elastic_transport import ObjectApiResponse
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
@@ -30,48 +31,48 @@ class ElasticService:
 
     async def upload_to_index(self, file: bytes, index_name: str):
         documents = []
-        byte_file = io.BytesIO(file)
+        doc = Document(io.BytesIO(file))
+
         # Open the file containing text.
-        with io.TextIOWrapper(byte_file, encoding="utf-8") as documents_file:
-            # Open the file in which the vectors will be saved.
-            processed = 0
-            # Processing 100 documents at a time.
-            lines = documents_file.readlines()
-            for i in range(len(lines)):
-                if lines[i].rstrip() == "":
-                    continue
-                processed += 1
-                # Create sentence embedding
-                vector = self.encode(lines[i])
-                doc = {
-                    "_id": str(i),
-                    "body": lines[i],
-                    "body_vector": vector,
-                }
-                # Append JSON document to a list.
-                documents.append(doc)
-        try:
-            self.client.indices.delete(index=index_name)
-        except Exception as e:
-            print(e)
-        self.client.indices.create(index=index_name, body={
-            "mappings": {
-                "properties": {
-                    "body_vector": {
-                        "type": "dense_vector",
-                        "dims": 1024,
-                        "index": True,
-                        "similarity": "cosine"
-                    },
-                    "body": {
-                        "type": "text"
-                    },
-                }
-            }})
-        if documents:
-            bulk(self.client, documents, index=index_name)
-        print("Finished")
-        return index_name
+        # Open the file in which the vectors will be saved.
+        processed = 0
+        # Processing 100 documents at a time.
+        lines = documents_file.readlines()
+        for i in range(len(lines)):
+            if lines[i].rstrip() == "":
+                continue
+            processed += 1
+            # Create sentence embedding
+            vector = self.encode(lines[i])
+            doc = {
+                "_id": str(i),
+                "body": lines[i],
+                "body_vector": vector,
+            }
+            # Append JSON document to a list.
+            documents.append(doc)
+    try:
+        self.client.indices.delete(index=index_name)
+    except Exception as e:
+        print(e)
+    self.client.indices.create(index=index_name, body={
+        "mappings": {
+            "properties": {
+                "body_vector": {
+                    "type": "dense_vector",
+                    "dims": 1024,
+                    "index": True,
+                    "similarity": "cosine"
+                },
+                "body": {
+                    "type": "text"
+                },
+            }
+        }})
+    if documents:
+        bulk(self.client, documents, index=index_name)
+    print("Finished")
+    return index_name
 
     def encode(self, document: str) -> list:
         try:

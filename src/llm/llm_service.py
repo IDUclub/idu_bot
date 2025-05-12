@@ -27,3 +27,14 @@ class LlmService:
             "Content-Type": "application/json"
         }
         return headers, data
+
+    async def generate_simple_query_data(self, prompt: str) -> tuple[dict, dict]:
+        data = {
+            "model": self.model_name,
+            "prompt": f"{prompt}",
+            "stream": False,
+        }
+        headers = {
+            "Content-Type": "application/json"
+        }
+        return headers, data
