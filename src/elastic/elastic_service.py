@@ -1,6 +1,8 @@
 import io
 
 from docx import Document
+from docx.oxml import CT_Tbl
+from docx.oxml.text.paragraph import CT_P
 from elastic_transport import ObjectApiResponse
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
@@ -32,47 +34,64 @@ class ElasticService:
     async def upload_to_index(self, file: bytes, index_name: str):
         documents = []
         doc = Document(io.BytesIO(file))
-
-        # Open the file containing text.
-        # Open the file in which the vectors will be saved.
-        processed = 0
-        # Processing 100 documents at a time.
-        lines = documents_file.readlines()
-        for i in range(len(lines)):
-            if lines[i].rstrip() == "":
+        ids = 0
+        for index, paragraph in enumerate(doc.paragraphs):
+            if paragraph.text.rstrip() == "":
                 continue
-            processed += 1
             # Create sentence embedding
-            vector = self.encode(lines[i])
+            vector = self.encode(paragraph.text)
             doc = {
-                "_id": str(i),
-                "body": lines[i],
+                "_id": str(index),
+                "body": paragraph.text,
                 "body_vector": vector,
             }
             # Append JSON document to a list.
             documents.append(doc)
-    try:
-        self.client.indices.delete(index=index_name)
-    except Exception as e:
-        print(e)
-    self.client.indices.create(index=index_name, body={
-        "mappings": {
-            "properties": {
-                "body_vector": {
-                    "type": "dense_vector",
-                    "dims": 1024,
-                    "index": True,
-                    "similarity": "cosine"
-                },
-                "body": {
-                    "type": "text"
-                },
-            }
-        }})
-    if documents:
-        bulk(self.client, documents, index=index_name)
-    print("Finished")
-    return index_name
+            ids += 1
+        for table in enumerate(doc.tables):
+            table_data = []
+            for row in table.rows:
+                row_data = [cell.text.strip() for cell in row.cells]
+                table_data.append(row_data)
+            columns = table_data[0]
+            current_ids_count = 0
+            for index, row in enumerate(table_data[1:]):
+                row_string = str(dict([(k, v) for k, v in zip(columns, row)]))
+                vector = self.encode(row_string)
+                doc = {
+                    "_id": str(ids + index),
+                    "body": row_string,
+                    "body_vector": vector,
+                }
+                # Append JSON document to a list.
+                documents.append(doc)
+                current_ids_count += 1
+            ids += current_ids_count
+        # Open the file containing text.
+        # Open the file in which the vectors will be saved.
+        processed = 0
+        try:
+            self.client.indices.delete(index=index_name)
+        except Exception as e:
+            print(e)
+        self.client.indices.create(index=index_name, body={
+            "mappings": {
+                "properties": {
+                    "body_vector": {
+                        "type": "dense_vector",
+                        "dims": 1024,
+                        "index": True,
+                        "similarity": "cosine"
+                    },
+                    "body": {
+                        "type": "text"
+                    },
+                }
+            }})
+        if documents:
+            bulk(self.client, documents, index=index_name)
+        print("Finished")
+        return index_name
 
     def encode(self, document: str) -> list:
         try:
