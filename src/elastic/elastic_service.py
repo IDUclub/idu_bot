@@ -33,9 +33,9 @@ class ElasticService:
 
     async def upload_to_index(self, file: bytes, index_name: str):
         documents = []
-        doc = Document(io.BytesIO(file))
+        full_doc = Document(io.BytesIO(file))
         ids = 0
-        for index, paragraph in enumerate(doc.paragraphs):
+        for index, paragraph in enumerate(full_doc.paragraphs):
             if paragraph.text.rstrip() == "":
                 continue
             # Create sentence embedding
@@ -48,7 +48,7 @@ class ElasticService:
             # Append JSON document to a list.
             documents.append(doc)
             ids += 1
-        for table in enumerate(doc.tables):
+        for table in full_doc.tables:
             table_data = []
             for row in table.rows:
                 row_data = [cell.text.strip() for cell in row.cells]
