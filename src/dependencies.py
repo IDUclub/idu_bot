@@ -7,5 +7,5 @@ from src.vectorizer.vectorizer_service import VectorizerService
 
 config = Config()
 model = VectorizerService(config)
-elastic_client = ElasticService(config, model)
 llm_service = LlmService(config)
+elastic_client = ElasticService(config, model, llm_service)

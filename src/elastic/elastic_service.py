@@ -1,22 +1,23 @@
 import io
+from tqdm import tqdm
 
 from docx import Document
-from docx.oxml import CT_Tbl
-from docx.oxml.text.paragraph import CT_P
 from elastic_transport import ObjectApiResponse
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 from fastapi import HTTPException
 
 from src.common.config.config import Config
+from src.llm.llm_service import LlmService
 from src.vectorizer.vectorizer_service import VectorizerService
 
 
 class ElasticService:
-    def __init__(self, config: Config, vectorizer_service: VectorizerService):
+    def __init__(self, config: Config, vectorizer_service: VectorizerService, llm_service: LlmService):
         self.client = Elasticsearch(hosts=[f"http://{config.get('ELASTIC_HOST')}:{config.get('ELASTIC_PORT')}"])
         self.config = config
         self.vectorizer_service = vectorizer_service
+        self.llm_service = llm_service
 
     async def search(self, embedding: list) -> ObjectApiResponse:
         index_name = self.config.get("ELASTIC_DOCUMENT_INDEX")
@@ -35,7 +36,7 @@ class ElasticService:
         documents = []
         full_doc = Document(io.BytesIO(file))
         ids = 0
-        for index, paragraph in enumerate(full_doc.paragraphs):
+        for index, paragraph in tqdm(enumerate(full_doc.paragraphs), total=len(full_doc.paragraphs), desc="Processing texts"):
             if paragraph.text.rstrip() == "":
                 continue
             # Create sentence embedding
@@ -48,25 +49,19 @@ class ElasticService:
             # Append JSON document to a list.
             documents.append(doc)
             ids += 1
-        for table in full_doc.tables:
+        for index, table in tqdm(enumerate(full_doc.tables), total=len(full_doc.tables) ,desc="Processint tables"):
             table_data = []
             for row in table.rows:
                 row_data = [cell.text.strip() for cell in row.cells]
                 table_data.append(row_data)
-            columns = table_data[0]
-            current_ids_count = 0
-            for index, row in enumerate(table_data[1:]):
-                row_string = str(dict([(k, v) for k, v in zip(columns, row)]))
-                vector = self.encode(row_string)
-                doc = {
-                    "_id": str(ids + index),
-                    "body": row_string,
-                    "body_vector": vector,
-                }
-                # Append JSON document to a list.
-                documents.append(doc)
-                current_ids_count += 1
-            ids += current_ids_count
+            table_description = await self.llm_service.generate_table_description(table_data)
+            vector = self.encode(table_description)
+            doc = {
+                "_id": str(ids + index),
+                "body": str(table_description),
+                "body_vector": vector,
+            }
+            documents.append(doc)
         # Open the file containing text.
         # Open the file in which the vectors will be saved.
         processed = 0
