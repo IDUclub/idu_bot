@@ -6,6 +6,7 @@ from elastic_transport import ObjectApiResponse
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 from fastapi import HTTPException
+from loguru import logger
 
 from src.common.config.config import Config
 from src.llm.llm_service import LlmService
@@ -18,6 +19,14 @@ class ElasticService:
         self.config = config
         self.vectorizer_service = vectorizer_service
         self.llm_service = llm_service
+
+    async def delete_documents_from_index(self, index_name: str) -> str:
+        try:
+            self.client.delete_by_query(index=index_name, body={"query": {"match_all": {}}})
+            return f"Successfully deleted all documents from index {index_name}"
+        except Exception as e:
+            logger.exception(e)
+            raise HTTPException(status_code=500, detail=e.__str__())
 
     async def search(self, embedding: list) -> ObjectApiResponse:
         index_name = self.config.get("ELASTIC_DOCUMENT_INDEX")
@@ -32,10 +41,28 @@ class ElasticService:
         }
         return self.client.search(index=index_name, body=query_body)
 
+    async def get_last_index(self, index_name: str) -> int:
+        query_body = {
+            "size": 1,
+            "sort": [
+                {
+                    "num_id": {
+                        "order": "desc"
+                    }
+                }
+            ]
+        }
+
+        last_id_data = self.client.search(index="test_two_doc", body=query_body)
+        if last_id_data.body["hits"]["hits"]:
+            return last_id_data.body["hits"]["hits"][0]["_source"]["num_id"]
+        return 0
+
     async def upload_to_index(self, file: bytes, index_name: str):
         documents = []
         full_doc = Document(io.BytesIO(file))
-        ids = 0
+        ids = await self.get_last_index(index_name)
+        logger.info(f"Started uploading documents to index {index_name} from id {ids}")
         for index, paragraph in tqdm(enumerate(full_doc.paragraphs), total=len(full_doc.paragraphs), desc="Processing texts"):
             if paragraph.text.rstrip() == "":
                 continue
@@ -43,6 +70,7 @@ class ElasticService:
             vector = self.encode(paragraph.text)
             doc = {
                 "_id": str(index),
+                "num_id": index,
                 "body": paragraph.text,
                 "body_vector": vector,
             }
@@ -58,6 +86,7 @@ class ElasticService:
             vector = self.encode(table_description)
             doc = {
                 "_id": str(ids + index),
+                "num_id": index,
                 "body": str(table_description),
                 "body_vector": vector,
             }
@@ -81,6 +110,9 @@ class ElasticService:
                     "body": {
                         "type": "text"
                     },
+                    "num_id": {
+                        "type": "long"
+                    }
                 }
             }})
         if documents:

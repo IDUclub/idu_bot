@@ -54,7 +54,8 @@ class LlmService:
         }
         return headers, data
 
-    async def generate_table_description(self, table_data: list[dict[str, Any]]) -> str | None:
+    async def generate_table_description\
+                    (self, table_data: list[dict[str, Any]]) -> str | None:
 
         prompt = f"""
                   Опиши следующую таблицу, представленную в формате json, расскажи какая информация содержится в таблице:
