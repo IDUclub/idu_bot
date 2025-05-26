@@ -2,9 +2,11 @@ import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 
 from src.bot import bot
 from src.elastic.elastic_controller import elastic_router
+from src.idu_llm.idu_llm_controller import idu_llm_router
 
 
 @asynccontextmanager
@@ -19,3 +21,8 @@ app = FastAPI(
 )
 
 app.include_router(elastic_router, prefix="")
+app.include_router(idu_llm_router, prefix="")
+
+@app.get("/", include_in_schema=False)
+async def docs_redirect():
+    return RedirectResponse(url="/docs")

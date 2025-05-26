@@ -9,23 +9,29 @@ from src.common.config.config import Config
 
 class LlmService:
     def __init__(self, config: Config):
+
         self.url = f"http://{config.get('LLM_HOST')}:{config.get('LLM_PORT')}"
         self.model_name = config.get('LLM_MODEL')
+        self.client_cert = config.get("CLIENT_CERT")
 
     async def generate_response(self, headers: dict, data: dict) -> str | None:
 
         try:
-            response = requests.post(f"{self.url}/api/generate", headers=headers, json=data)
+            response = requests.post(
+                f"{self.url}/api/generate",
+                headers=headers,
+                json=data,
+            )
             return response.json()["response"]
         except Exception as e:
             logger.exception(e)
             return None
 
-    async def generate_request_data(self, message: str, context: str) -> tuple[dict, dict]:
+    async def generate_request_data(self, message: str, context: str, stream: bool=True) -> tuple[dict, dict]:
         data = {
             "model": self.model_name,
             "prompt": f"НАЧАЛО ВОПРОСА | {message} | КОНЕЦ ВОПРОСА",
-            "stream": True,
+            "stream": stream,
             "system": "Ты отвечаешь на вопросы по документам, связанным с градостроительством и урбанистикой \"СП 42.13330.2016 Градостроительство. Планировка и застройка городских и сельских поселений. Актуализированная редакция СНиП 2.07.01-89\"СВОД ПРАВИЛ ИНЖЕНЕРНЫЕ ИЗЫСКАНИЯ ДЛЯ СТРОИТЕЛЬСТВА ОСНОВНЫЕ ПОЛОЖЕНИЯ АКТУАЛИЗИРОВАННАЯ РЕДАКЦИЯ СНиП 11-02-96 Engineering survey for construction. Basic principles СП 47.13330.2016\""
                       "инструкция: Ответь на вопрос на основе документа."
                       "Если он не подходит, скажи об этом. Если в тексте не было вопроса или просьбы, попроси уточнить запрос."
