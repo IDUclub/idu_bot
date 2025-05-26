@@ -10,3 +10,4 @@ gunicorn~=23.0.0
 python-multipart~=0.0.9
 IDU-config~=1.0.2
 python-docx~=1.1.2
+tqdm~=4.67.1
