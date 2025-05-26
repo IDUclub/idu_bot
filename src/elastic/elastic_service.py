@@ -52,13 +52,34 @@ class ElasticService:
                 }
             ]
         }
-
-        last_id_data = self.client.search(index="test_two_doc", body=query_body)
+        try:
+            last_id_data = self.client.search(index=index_name, body=query_body)
+        except Exception as e:
+            logger.exception(e)
+            raise HTTPException(status_code=500, detail=e.__str__())
         if last_id_data.body["hits"]["hits"]:
             return last_id_data.body["hits"]["hits"][0]["_source"]["num_id"]
         return 0
 
     async def upload_to_index(self, file: bytes, index_name: str):
+        if not self.client.indices.exists(index=index_name):
+            self.client.indices.create(index=index_name, body={
+                "mappings": {
+                    "properties": {
+                        "body_vector": {
+                            "type": "dense_vector",
+                            "dims": 1024,
+                            "index": True,
+                            "similarity": "cosine"
+                        },
+                        "body": {
+                            "type": "text"
+                        },
+                        "num_id": {
+                            "type": "long"
+                        }
+                    }
+                }})
         documents = []
         full_doc = Document(io.BytesIO(file))
         ids = await self.get_last_index(index_name)
@@ -77,44 +98,21 @@ class ElasticService:
             # Append JSON document to a list.
             documents.append(doc)
             ids += 1
-        for index, table in tqdm(enumerate(full_doc.tables), total=len(full_doc.tables) ,desc="Processint tables"):
-            table_data = []
-            for row in table.rows:
-                row_data = [cell.text.strip() for cell in row.cells]
-                table_data.append(row_data)
-            table_description = await self.llm_service.generate_table_description(table_data)
-            vector = self.encode(table_description)
-            doc = {
-                "_id": str(ids + index),
-                "num_id": index,
-                "body": str(table_description),
-                "body_vector": vector,
-            }
-            documents.append(doc)
-        # Open the file containing text.
-        # Open the file in which the vectors will be saved.
-        processed = 0
-        try:
-            self.client.indices.delete(index=index_name)
-        except Exception as e:
-            print(e)
-        self.client.indices.create(index=index_name, body={
-            "mappings": {
-                "properties": {
-                    "body_vector": {
-                        "type": "dense_vector",
-                        "dims": 1024,
-                        "index": True,
-                        "similarity": "cosine"
-                    },
-                    "body": {
-                        "type": "text"
-                    },
-                    "num_id": {
-                        "type": "long"
-                    }
-                }
-            }})
+        # for index, table in tqdm(enumerate(full_doc.tables), total=len(full_doc.tables) ,desc="Processint tables"):
+        #     table_data = []
+        #     for row in table.rows:
+        #         row_data = [cell.text.strip() for cell in row.cells]
+        #         table_data.append(row_data)
+        #     table_description = await self.llm_service.generate_table_description(table_data)
+        #     vector = self.encode(table_description)
+        #     doc = {
+        #         "_id": str(ids + index),
+        #         "num_id": index,
+        #         "body": str(table_description),
+        #         "body_vector": vector,
+        #     }
+        #     documents.append(doc)
+
         if documents:
             bulk(self.client, documents, index=index_name)
         print("Finished")
