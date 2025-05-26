@@ -1,9 +1,14 @@
-from src.common.config.config import Config
+from iduconfig import Config
+
+from src.common.exceptions.http_exception import http_exception
 from src.elastic.elastic_service import ElasticService
 from src.llm.llm_service import LlmService
 from src.vectorizer.vectorizer_service import VectorizerService
+from src.idu_llm.idu_llm_service import IduLLMService
+
 
 config = Config()
 model = VectorizerService(config)
-elastic_client = ElasticService(config, model)
 llm_service = LlmService(config)
+elastic_client = ElasticService(config, model, llm_service)
+idu_llm_client = IduLLMService(llm_service, elastic_client, model)

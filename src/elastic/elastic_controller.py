@@ -18,6 +18,10 @@ async def upload_document(
 ):
     return await elastic_client.upload_to_index(await file.read(), dto.index_name)
 
+@elastic_router.delete("/llm/delete_documents/{index_name}", tags=tag)
+async def delete_document(index_name: str):
+    return await elastic_client.delete_documents_from_index(index_name)
+
 
 @elastic_router.get("/llm/search", tags=tag)
 async def search(

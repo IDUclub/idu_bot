@@ -1,19 +1,32 @@
 import io
+from tqdm import tqdm
 
+from docx import Document
 from elastic_transport import ObjectApiResponse
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 from fastapi import HTTPException
+from loguru import logger
 
 from src.common.config.config import Config
+from src.llm.llm_service import LlmService
 from src.vectorizer.vectorizer_service import VectorizerService
 
 
 class ElasticService:
-    def __init__(self, config: Config, vectorizer_service: VectorizerService):
+    def __init__(self, config: Config, vectorizer_service: VectorizerService, llm_service: LlmService):
         self.client = Elasticsearch(hosts=[f"http://{config.get('ELASTIC_HOST')}:{config.get('ELASTIC_PORT')}"])
         self.config = config
         self.vectorizer_service = vectorizer_service
+        self.llm_service = llm_service
+
+    async def delete_documents_from_index(self, index_name: str) -> str:
+        try:
+            self.client.delete_by_query(index=index_name, body={"query": {"match_all": {}}})
+            return f"Successfully deleted all documents from index {index_name}"
+        except Exception as e:
+            logger.exception(e)
+            raise HTTPException(status_code=500, detail=e.__str__())
 
     async def search(self, embedding: list) -> ObjectApiResponse:
         index_name = self.config.get("ELASTIC_DOCUMENT_INDEX")
@@ -28,28 +41,59 @@ class ElasticService:
         }
         return self.client.search(index=index_name, body=query_body)
 
+    async def get_last_index(self, index_name: str) -> int:
+        query_body = {
+            "size": 1,
+            "sort": [
+                {
+                    "num_id": {
+                        "order": "desc"
+                    }
+                }
+            ]
+        }
+
+        last_id_data = self.client.search(index="test_two_doc", body=query_body)
+        if last_id_data.body["hits"]["hits"]:
+            return last_id_data.body["hits"]["hits"][0]["_source"]["num_id"]
+        return 0
+
     async def upload_to_index(self, file: bytes, index_name: str):
         documents = []
-        byte_file = io.BytesIO(file)
+        full_doc = Document(io.BytesIO(file))
+        ids = await self.get_last_index(index_name)
+        logger.info(f"Started uploading documents to index {index_name} from id {ids}")
+        for index, paragraph in tqdm(enumerate(full_doc.paragraphs), total=len(full_doc.paragraphs), desc="Processing texts"):
+            if paragraph.text.rstrip() == "":
+                continue
+            # Create sentence embedding
+            vector = self.encode(paragraph.text)
+            doc = {
+                "_id": str(index),
+                "num_id": index,
+                "body": paragraph.text,
+                "body_vector": vector,
+            }
+            # Append JSON document to a list.
+            documents.append(doc)
+            ids += 1
+        for index, table in tqdm(enumerate(full_doc.tables), total=len(full_doc.tables) ,desc="Processint tables"):
+            table_data = []
+            for row in table.rows:
+                row_data = [cell.text.strip() for cell in row.cells]
+                table_data.append(row_data)
+            table_description = await self.llm_service.generate_table_description(table_data)
+            vector = self.encode(table_description)
+            doc = {
+                "_id": str(ids + index),
+                "num_id": index,
+                "body": str(table_description),
+                "body_vector": vector,
+            }
+            documents.append(doc)
         # Open the file containing text.
-        with io.TextIOWrapper(byte_file, encoding="utf-8") as documents_file:
-            # Open the file in which the vectors will be saved.
-            processed = 0
-            # Processing 100 documents at a time.
-            lines = documents_file.readlines()
-            for i in range(len(lines)):
-                if lines[i].rstrip() == "":
-                    continue
-                processed += 1
-                # Create sentence embedding
-                vector = self.encode(lines[i])
-                doc = {
-                    "_id": str(i),
-                    "body": lines[i],
-                    "body_vector": vector,
-                }
-                # Append JSON document to a list.
-                documents.append(doc)
+        # Open the file in which the vectors will be saved.
+        processed = 0
         try:
             self.client.indices.delete(index=index_name)
         except Exception as e:
@@ -66,6 +110,9 @@ class ElasticService:
                     "body": {
                         "type": "text"
                     },
+                    "num_id": {
+                        "type": "long"
+                    }
                 }
             }})
         if documents:
