@@ -20,6 +20,11 @@ class ElasticService:
         self.vectorizer_service = vectorizer_service
         self.llm_service = llm_service
 
+    async def delete_index(self, index_name: str):
+
+        resp = self.client.options(ignore_status=[400, 404]).indices.delete(index=index_name)
+        return resp.raw
+
     async def delete_documents_from_index(self, index_name: str) -> str:
         try:
             self.client.delete_by_query(index=index_name, body={"query": {"match_all": {}}})
@@ -82,36 +87,39 @@ class ElasticService:
                 }})
         documents = []
         full_doc = Document(io.BytesIO(file))
-        ids = await self.get_last_index(index_name)
-        logger.info(f"Started uploading documents to index {index_name} from id {ids}")
+        last_id = await self.get_last_index(index_name)
+        logger.info(f"Started uploading documents to index {index_name} from id {last_id}")
         for index, paragraph in tqdm(enumerate(full_doc.paragraphs), total=len(full_doc.paragraphs), desc="Processing texts"):
             if paragraph.text.rstrip() == "":
                 continue
             # Create sentence embedding
+            last_id += 1
             vector = self.encode(paragraph.text)
             doc = {
-                "_id": str(index),
+                "_id": str(last_id),
                 "num_id": index,
                 "body": paragraph.text,
                 "body_vector": vector,
             }
             # Append JSON document to a list.
             documents.append(doc)
-            ids += 1
-        # for index, table in tqdm(enumerate(full_doc.tables), total=len(full_doc.tables) ,desc="Processint tables"):
-        #     table_data = []
-        #     for row in table.rows:
-        #         row_data = [cell.text.strip() for cell in row.cells]
-        #         table_data.append(row_data)
-        #     table_description = await self.llm_service.generate_table_description(table_data)
-        #     vector = self.encode(table_description)
-        #     doc = {
-        #         "_id": str(ids + index),
-        #         "num_id": index,
-        #         "body": str(table_description),
-        #         "body_vector": vector,
-        #     }
-        #     documents.append(doc)
+        for table in tqdm(full_doc.tables, total=len(full_doc.tables) ,desc="Processint tables"):
+
+            table_data = []
+            for row in table.rows:
+                row_data = [cell.text.strip() for cell in row.cells]
+                table_data.append(row_data)
+            table_questions = await self.llm_service.generate_table_description(table_data)
+            for question in table_questions:
+                last_id += 1
+                vector = self.encode(question)
+                doc = {
+                    "_id": str(last_id),
+                    "num_id": last_id,
+                    "body": str(table_data),
+                    "body_vector": vector,
+                }
+                documents.append(doc)
 
         if documents:
             bulk(self.client, documents, index=index_name)
