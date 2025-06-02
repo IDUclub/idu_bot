@@ -5,3 +5,4 @@ DECFILE
 .env.*
 venv
 *.ipynb
+*/data

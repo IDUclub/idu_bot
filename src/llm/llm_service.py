@@ -1,8 +1,9 @@
 from typing import Any
 
+import pandas as pd
 import requests
 from loguru import logger
-from elastic_transport import ObjectApiResponse
+
 
 from src.common.config.config import Config
 
@@ -60,12 +61,11 @@ class LlmService:
         }
         return headers, data
 
-    async def generate_table_description(self, table_data: list[dict[str, Any]]) -> list[str] | None:
+    async def generate_table_description(self, table_data: str, num_questions: int) -> list[str] | None:
 
         prompt = f"""
-                  Придумай 10 вопросов к следующей таблице. Каждый вопрос в ответе должен начинаться с новой строчки:
-                  Названия колонок таблицы: {table_data[0]}
-                  Строки таблицы: {table_data[1:]}
+                  Придумай {num_questions} вопросов к следующей таблице. Каждый вопрос в ответе должен начинаться с новой строчки:
+                  {table_data}
                   """
 
         headers, data = await self.generate_simple_query_data(prompt)
