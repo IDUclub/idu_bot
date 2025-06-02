@@ -41,8 +41,8 @@ class ElasticService:
             logger.exception(e)
             raise HTTPException(status_code=500, detail=e.__str__())
 
-    async def search(self, embedding: list) -> ObjectApiResponse:
-        index_name = self.config.get("ELASTIC_DOCUMENT_INDEX")
+    async def search(self, embedding: list, index_name: str) -> ObjectApiResponse:
+
         query_body = {
             "knn": {
                 "field": "body_vector",
