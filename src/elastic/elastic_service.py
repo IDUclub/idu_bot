@@ -123,7 +123,7 @@ class ElasticService:
                     "properties": {
                         "body_vector": {
                             "type": "dense_vector",
-                            "dims": 1024,
+                            "dims": 4096,
                             "index": True,
                             "similarity": "cosine"
                         },
@@ -150,9 +150,9 @@ class ElasticService:
                 table_data = entity[0]
                 try:
                     table_with_context = (
-                        "\n".join([i[0] for i in dock_blocks[:index - table_context_size]]),
+                        "\n".join([i[0] for i in dock_blocks[index - table_context_size: index]]),
                         table_data,
-                        "\n".join([i[0] for i in dock_blocks[index - table_context_size:]])
+                        "\n".join([i[0] for i in dock_blocks[index: index - table_context_size]])
                     )
                 except Exception as e:
                     logger.exception(e)

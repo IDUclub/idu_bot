@@ -52,6 +52,6 @@ async def websocket_llm_endpoint(websocket: WebSocket) -> NoReturn:
                 if text:
                     await websocket.send_text(text)
                 else:
-                    await websocket.close(reasone="Stream ended")
+                    await websocket.close(1000, "Stream ended")
     except Exception as e:
-        await websocket.close(code=1000, reason=str(e))
+        await websocket.close(code=1011, reason=e.__str__())
