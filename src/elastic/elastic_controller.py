@@ -1,5 +1,6 @@
 from typing import Annotated
 
+from IPython.terminal.shortcuts.auto_suggest import accept_word
 from fastapi import APIRouter, UploadFile, Depends, Body, Query
 
 from src.dependencies import elastic_client, config
@@ -14,6 +15,10 @@ cfg_tag = ["Config Controller"]
 @elastic_router.get("/llm/indexes", tags=tag)
 async def get_available_indexes():
     return await elastic_client.get_available_indexes()
+
+@elastic_router.post("/llm/indexes", tags=tag)
+async def create_index(index_name: str):
+    return await elastic_client.create_index(index_name)
 
 @elastic_router.post("/llm/upload_document", tags=tag)
 async def upload_document(

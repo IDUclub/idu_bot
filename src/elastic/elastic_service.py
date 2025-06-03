@@ -10,6 +10,7 @@ from elasticsearch.helpers import bulk
 from fastapi import HTTPException
 from loguru import logger
 
+from src.dependencies import http_exception
 from src.common.config.config import Config
 from src.llm.llm_service import LlmService
 from src.vectorizer.vectorizer_service import VectorizerService
@@ -27,6 +28,37 @@ class ElasticService:
 
         all_indices = self.client.indices.get_alias(index="*")
         return [index for index in all_indices if not index.startswith('.') and not index.startswith('_')]
+
+    async def create_index(self, index_name: str):
+
+        try:
+            resp = self.client.indices.create(index=index_name, body={
+                "mappings": {
+                    "properties": {
+                        "body_vector": {
+                            "type": "dense_vector",
+                            "dims": 4096,
+                            "index": True,
+                            "similarity": "cosine"
+                        },
+                        "body": {
+                            "type": "text"
+                        },
+                        "num_id": {
+                            "type": "long"
+                        }
+                    }
+                }})
+
+            return resp.raw
+
+        except Exception as e:
+            raise http_exception(
+                500,
+                "Failed to create index",
+                _input={"index_name": index_name},
+                _detail={"error": e.__str__()}
+            )
 
     async def delete_index(self, index_name: str):
 
@@ -118,23 +150,7 @@ class ElasticService:
 
     async def upload_to_index(self, file: bytes, index_name: str, table_context_size: int, table_questions_num: int):
         if not self.client.indices.exists(index=index_name):
-            self.client.indices.create(index=index_name, body={
-                "mappings": {
-                    "properties": {
-                        "body_vector": {
-                            "type": "dense_vector",
-                            "dims": 4096,
-                            "index": True,
-                            "similarity": "cosine"
-                        },
-                        "body": {
-                            "type": "text"
-                        },
-                        "num_id": {
-                            "type": "long"
-                        }
-                    }
-                }})
+            await self.create_index(index_name)
         documents = []
         full_doc = Document(io.BytesIO(file))
         last_id = await self.get_last_index(index_name)

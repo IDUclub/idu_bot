@@ -45,13 +45,12 @@ async def websocket_llm_endpoint(websocket: WebSocket) -> NoReturn:
 
     await websocket.accept()
     try:
-        while True:
-            request = await websocket.receive_json()
-            message_info = BaseLlmRequest(**request)
-            async for text in idu_llm_client.generate_stream_response(message_info):
-                if text:
-                    await websocket.send_text(text)
-                else:
-                    await websocket.close(1000, "Stream ended")
+        request = await websocket.receive_json()
+        message_info = BaseLlmRequest(**request)
+        async for text in idu_llm_client.generate_stream_response(message_info):
+            if text:
+                await websocket.send_text(text)
+            else:
+                await websocket.close(1000, "Stream ended")
     except Exception as e:
         await websocket.close(code=1011, reason=e.__str__())
