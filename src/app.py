@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from src.bot import bot
 from src.elastic.elastic_controller import elastic_router
@@ -17,10 +17,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(
-    lifespan=lifespan,
-    root_path="/api/v1"
-)
+app = FastAPI(lifespan=lifespan, root_path="/api/v1")
 
 origins = ["*"]
 
@@ -34,6 +31,7 @@ app.add_middleware(
 
 app.include_router(elastic_router, prefix="")
 app.include_router(idu_llm_router, prefix="")
+
 
 @app.get("/", include_in_schema=False)
 async def docs_redirect():

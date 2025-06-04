@@ -18,7 +18,7 @@ class VectorizerService:
         data = {
             "input": prompt,
             "model": self.config.get("VECTORIZER_MODEL"),
-            "encoding_format": "float"
+            "encoding_format": "float",
         }
 
         try:
