@@ -1,6 +1,5 @@
 from typing import Annotated
 
-from IPython.terminal.shortcuts.auto_suggest import accept_word
 from fastapi import APIRouter, UploadFile, Depends, Body, Query
 
 from src.dependencies import elastic_client, config
