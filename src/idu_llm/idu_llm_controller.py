@@ -1,11 +1,10 @@
 from typing import NoReturn
 
-from .dto.base_request_dto import BaseLlmRequest
-
 from fastapi import APIRouter, WebSocket
 
 from src.dependencies import idu_llm_client
 
+from .dto.base_request_dto import BaseLlmRequest
 
 idu_llm_router = APIRouter()
 
@@ -28,6 +27,7 @@ async def generate(
 
     response = await idu_llm_client.generate_response(message_info)
     return response
+
 
 @idu_llm_router.websocket("/ws/generate")
 async def websocket_llm_endpoint(websocket: WebSocket) -> NoReturn:

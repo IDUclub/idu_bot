@@ -3,19 +3,20 @@ import json
 import requests
 
 from src.common.exceptions.http_exception import http_exception
-from src.llm.llm_service import LlmService
 from src.elastic.elastic_service import ElasticService
+from src.llm.llm_service import LlmService
 from src.vectorizer.vectorizer_service import VectorizerService
+
 from .dto.base_request_dto import BaseLlmRequest
 
 
 class IduLLMService:
 
     def __init__(
-            self,
-            llm_service: LlmService,
-            elastic_client: ElasticService,
-            vectorizer_model: VectorizerService,
+        self,
+        llm_service: LlmService,
+        elastic_client: ElasticService,
+        vectorizer_model: VectorizerService,
     ):
 
         self.llm_service = llm_service
@@ -33,7 +34,9 @@ class IduLLMService:
                 _detail=e.__str__(),
             )
         try:
-            elastic_response = await self.elastic_client.search(embedding, message_info.index_name)
+            elastic_response = await self.elastic_client.search(
+                embedding, message_info.index_name
+            )
         except Exception as e:
             raise http_exception(
                 500,
@@ -42,10 +45,17 @@ class IduLLMService:
                     "message_info.user_request": message_info.user_request,
                     "embedding": embedding,
                 },
-                _detail=e.__str__()
+                _detail=e.__str__(),
             )
-        context = ';'.join([resp["_source"]["body"].rstrip() for resp in elastic_response["hits"]["hits"]])
-        headers, data = await self.llm_service.generate_request_data(message_info.user_request, context, False)
+        context = ";".join(
+            [
+                resp["_source"]["body"].rstrip()
+                for resp in elastic_response["hits"]["hits"]
+            ]
+        )
+        headers, data = await self.llm_service.generate_request_data(
+            message_info.user_request, context, False
+        )
         try:
             llm_response = requests.post(
                 f"{self.llm_service.url}/api/generate",
@@ -76,7 +86,7 @@ class IduLLMService:
                     "llm_request_headers": headers,
                     "formed_data": data,
                 },
-                _detail=llm_response.text
+                _detail=llm_response.text,
             )
         return llm_response.json()
 
@@ -91,7 +101,9 @@ class IduLLMService:
                 _detail=e.__str__(),
             )
         try:
-            elastic_response = await self.elastic_client.search(embedding, message_info.index_name)
+            elastic_response = await self.elastic_client.search(
+                embedding, message_info.index_name
+            )
         except Exception as e:
             raise http_exception(
                 500,
@@ -100,18 +112,25 @@ class IduLLMService:
                     "message_info.user_request": message_info.user_request,
                     "embedding": embedding,
                 },
-                _detail=e.__str__()
+                _detail=e.__str__(),
             )
-        context = ';'.join([resp["_source"]["body"].rstrip() for resp in elastic_response["hits"]["hits"]])
-        headers, data = await self.llm_service.generate_request_data(message_info.user_request, context, True)
+        context = ";".join(
+            [
+                resp["_source"]["body"].rstrip()
+                for resp in elastic_response["hits"]["hits"]
+            ]
+        )
+        headers, data = await self.llm_service.generate_request_data(
+            message_info.user_request, context, True
+        )
         with requests.post(
             f"{self.llm_service.url}/api/generate",
             headers=headers,
             data=json.dumps(data),
-            stream=True
+            stream=True,
         ) as response:
             if response.status_code == 200:
-                for chunk in response.iter_content(chunk_size=512*1024):
+                for chunk in response.iter_content(chunk_size=512 * 1024):
                     chunk = json.loads(chunk)
                     if not chunk["done"]:
                         yield chunk["response"]
