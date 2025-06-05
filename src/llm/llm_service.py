@@ -42,6 +42,7 @@ class LlmService:
             "отвечай, что ты анализируешь документы и отвечаешь на вопросы по ним.\n"
             f"НАЧАЛО ДОКУМЕНТА | {context} | КОНЕЦ ДОКУМЕНТА",
             "options": {"temperature": 0.2},
+            "think": False,
         }
         print(context)
         headers = {"Content-Type": "application/json"}
