@@ -1,4 +1,6 @@
 import io
+import json
+import asyncio
 
 import pandas as pd
 from docx import Document
@@ -23,6 +25,7 @@ class ElasticService:
         config: Config,
         vectorizer_service: VectorizerService,
         llm_service: LlmService,
+        index_mapper: dict[str, str],
     ):
         self.client = Elasticsearch(
             hosts=[f"http://{config.get('ELASTIC_HOST')}:{config.get('ELASTIC_PORT')}"]
@@ -30,21 +33,63 @@ class ElasticService:
         self.config = config
         self.vectorizer_service = vectorizer_service
         self.llm_service = llm_service
+        self.index_mapper = index_mapper
+        self.reverse_index_mapper = {v : k for k, v in index_mapper.items()}
+
+    async def check_indexes(self):
+        for index in self.index_mapper.keys():
+            if not self.client.indices.exists(index=index):
+                await self.create_index(self.index_mapper[index], index)
 
     async def get_available_indexes(self) -> list[str]:
 
         all_indices = self.client.indices.get_alias(index="*")
-        return [
+        index_list =  [
             index
             for index in all_indices
             if not index.startswith(".") and not index.startswith("_")
         ]
 
-    async def create_index(self, index_name: str):
+        indexes_ru_name = [self.index_mapper.get(index) for index in index_list if self.index_mapper.get(index)]
+        return indexes_ru_name
+
+    async def update_index_mapping(
+            self,
+            index_map: dict[str, str],
+    ) -> str:
+
+        #ToDo Add mapping
+        try:
+            self.index_mapper.update(index_map)
+            # with open ("./cache/index_mapper.json", "w") as index_mapper_file:
+            #     json.dump(index_map, index_mapper_file)
+            return "Index mapper updated."
+        except Exception as e:
+            logger.error(e)
+            raise http_exception(
+                500,
+                "Error updating index mapper.",
+                _input=index_map,
+                _detail={
+                    "error": e.__str__(),
+                }
+            )
+
+    async def create_index(self, index_name: str, en: str):
+
+        if self.client.indices.exists(index=en):
+            raise http_exception(
+                400,
+                "Index already exists.",
+                _input={"index": en},
+                _detail={
+                    "existing)_indexes": list(self.index_mapper.keys())
+                }
+            )
 
         try:
             resp = self.client.indices.create(
-                index=index_name,
+                index=en,
                 body={
                     "mappings": {
                         "properties": {
@@ -60,6 +105,8 @@ class ElasticService:
                     }
                 },
             )
+
+            self.index_mapper[en] = index_name
 
             return resp.raw
 
@@ -88,7 +135,10 @@ class ElasticService:
             logger.exception(e)
             raise HTTPException(status_code=500, detail=e.__str__())
 
-    async def search(self, embedding: list, index_name: str) -> ObjectApiResponse:
+    async def search(self, embedding: list, index_name: str | None=None) -> ObjectApiResponse:
+
+        if index_name is None:
+            index_name = self.config.get("ELASTIC_DOCUMENT_INDEX")
 
         query_body = {
             "knn": {
