@@ -28,8 +28,6 @@ commands = [
     BotCommand('menu', 'Открыть главное меню'),
 ]
 
-bot.set_my_commands(commands)
-
 async def show_categories(message):
 
     markup = InlineKeyboardMarkup(row_width=1)
@@ -87,7 +85,7 @@ async def show_menu(message):
 
 @bot.message_handler(commands=["start"])
 async def send_welcome(message):
-
+    await bot.set_my_commands(commands)
     await bot.reply_to(
         message,
         """Привет! Я ассистент ИДУ ИТМО! Вы можете задать мне любой вопрос по документам.""",
