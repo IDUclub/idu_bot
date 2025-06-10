@@ -17,8 +17,13 @@ async def get_available_indexes():
 
 
 @elastic_router.post("/llm/indexes", tags=tag)
-async def create_index(index_name: str):
-    return await elastic_client.create_index(index_name)
+async def create_index(index_name: str, en: str):
+    return await elastic_client.create_index(index_name, en)
+
+
+@elastic_router.put("llm/index_map", tags=tag)
+async def update_index_map(map: dict[str, str]):
+    return await elastic_client.update_index_mapping(map)
 
 
 @elastic_router.post("/llm/upload_document", tags=tag)

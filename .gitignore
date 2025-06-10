@@ -2,6 +2,7 @@
 DECFILE
 *.crt
 *.docx
+*.doc
 .env.*
 venv
 *.ipynb
