@@ -12,7 +12,6 @@ from src.vectorizer.vectorizer_service import VectorizerService
 
 #ToDo Remove to cache
 index_mapper = {
-    'prostor_doc': 'Простор',
     'general': 'Общее',
     'investment': 'Инвестиционная',
     'pre_design': 'Предпроектная',
