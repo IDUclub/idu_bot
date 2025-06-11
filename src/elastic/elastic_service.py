@@ -240,14 +240,14 @@ class ElasticService:
                         "\n".join(
                             [
                                 i[0]
-                                for i in dock_blocks[index - table_context_size : index]
+                                for i in dock_blocks[max(index - table_context_size, 0) : index] if i[1] == "text"
                             ]
                         ),
                         table_data,
                         "\n".join(
                             [
                                 i[0]
-                                for i in dock_blocks[index : index - table_context_size]
+                                for i in dock_blocks[index : index + table_context_size] if i[1] == "text"
                             ]
                         ),
                     )
