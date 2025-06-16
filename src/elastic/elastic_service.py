@@ -260,7 +260,7 @@ class ElasticService:
                 documents += docs
 
         if documents:
-            bulk(self.client, documents, index=index_name)
+            bulk(self.client, documents, index=index_name, request_timeout=1200)
         print("Finished")
         return index_name
 
