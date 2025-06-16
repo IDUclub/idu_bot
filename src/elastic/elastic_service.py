@@ -26,6 +26,7 @@ class ElasticService:
         vectorizer_service: VectorizerService,
         llm_service: LlmService,
         index_mapper: dict[str, str],
+        reverse_index_mapper: dict[str, str],
     ):
         self.client = Elasticsearch(
             hosts=[f"http://{config.get('ELASTIC_HOST')}:{config.get('ELASTIC_PORT')}"]
@@ -34,7 +35,7 @@ class ElasticService:
         self.vectorizer_service = vectorizer_service
         self.llm_service = llm_service
         self.index_mapper = index_mapper
-        self.reverse_index_mapper = {v : k for k, v in index_mapper.items()}
+        self.reverse_index_mapper = reverse_index_mapper
 
     async def check_indexes(self):
         for index in self.index_mapper.keys():

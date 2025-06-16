@@ -5,10 +5,8 @@ from json import JSONDecodeError
 
 import requests
 from loguru import logger
-from telebot import types
 from telebot.async_telebot import AsyncTeleBot
 from telebot.asyncio_helper import ApiTelegramException
-from telebot.states import StatesGroup, State
 from telebot.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 
 from src.dependencies import elastic_client, llm_service, model
