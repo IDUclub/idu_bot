@@ -26,6 +26,7 @@ class ElasticService:
         vectorizer_service: VectorizerService,
         llm_service: LlmService,
         index_mapper: dict[str, str],
+        reverse_index_mapper: dict[str, str],
     ):
         self.client = Elasticsearch(
             hosts=[f"http://{config.get('ELASTIC_HOST')}:{config.get('ELASTIC_PORT')}"]
@@ -34,7 +35,7 @@ class ElasticService:
         self.vectorizer_service = vectorizer_service
         self.llm_service = llm_service
         self.index_mapper = index_mapper
-        self.reverse_index_mapper = {v : k for k, v in index_mapper.items()}
+        self.reverse_index_mapper = reverse_index_mapper
 
     async def check_indexes(self):
         for index in self.index_mapper.keys():
@@ -240,14 +241,14 @@ class ElasticService:
                         "\n".join(
                             [
                                 i[0]
-                                for i in dock_blocks[index - table_context_size : index]
+                                for i in dock_blocks[max(index - table_context_size, 0) : index] if i[1] == "text"
                             ]
                         ),
                         table_data,
                         "\n".join(
                             [
                                 i[0]
-                                for i in dock_blocks[index : index - table_context_size]
+                                for i in dock_blocks[index : index + table_context_size] if i[1] == "text"
                             ]
                         ),
                     )
@@ -260,7 +261,7 @@ class ElasticService:
                 documents += docs
 
         if documents:
-            bulk(self.client, documents, index=index_name)
+            bulk(self.client, documents, index=index_name, request_timeout=1200)
         print("Finished")
         return index_name
 

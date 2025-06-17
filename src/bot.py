@@ -4,10 +4,9 @@ from datetime import datetime
 from json import JSONDecodeError
 
 import requests
-from telebot import types
+from loguru import logger
 from telebot.async_telebot import AsyncTeleBot
 from telebot.asyncio_helper import ApiTelegramException
-from telebot.states import StatesGroup, State
 from telebot.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 
 from src.dependencies import elastic_client, llm_service, model
@@ -168,7 +167,6 @@ async def echo(message: Message):
             stream=True,
         ) as response:
             if response.status_code == 200:
-
                 for chunk in response.iter_content(chunk_size=512 * 1024):
                     chunk = json.loads(chunk)
                     if not chunk["done"]:
@@ -240,6 +238,7 @@ async def echo(message: Message):
                 f" - {k}: количество {v['cnt']}, описания: {list(v['descriptions'])}\n"
             )
         text = f"Сообщение от {message.chat.username}: {message.text}\n\nОтвет: {next_message}"
+        logger.info(text)
         if error_msg != "":
             text += f"\n\nОшибки во время ответа: \n{error_msg}"
         await bot.send_message(
