@@ -1,8 +1,5 @@
 import io
-import json
-import asyncio
 
-import pandas as pd
 from docx import Document
 from elastic_transport import ObjectApiResponse
 from elasticsearch import Elasticsearch
@@ -145,8 +142,8 @@ class ElasticService:
             "knn": {
                 "field": "body_vector",
                 "query_vector": embedding,
-                "k": 20,
-                "num_candidates": 20,
+                "k": int(self.config.get("ELASTIC_K")),
+                "num_candidates": int(self.config.get("NUM_CANDIDATES")),
             },
             "_source": ["body"],
         }

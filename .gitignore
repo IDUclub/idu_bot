@@ -3,6 +3,7 @@ DECFILE
 *.crt
 *.docx
 *.doc
+*.xlsx
 .env.*
 venv
 *.ipynb
