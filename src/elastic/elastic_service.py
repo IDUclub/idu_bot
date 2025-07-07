@@ -1,8 +1,5 @@
 import io
-import json
-import asyncio
 
-import pandas as pd
 from docx import Document
 from elastic_transport import ObjectApiResponse
 from elasticsearch import Elasticsearch
