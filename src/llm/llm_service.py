@@ -7,8 +7,8 @@ from src.common.config.config import Config
 class LlmService:
     def __init__(self, config: Config):
 
+        self.config = config
         self.url = f"http://{config.get('LLM_HOST')}:{config.get('LLM_PORT')}"
-        self.model_name = config.get("LLM_MODEL")
         self.client_cert = config.get("CLIENT_CERT")
 
     async def generate_response(self, headers: dict, data: dict) -> str | None:
@@ -28,8 +28,8 @@ class LlmService:
         self, message: str, context: str, stream: bool = True
     ) -> tuple[dict, dict]:
         data = {
-            "model": self.model_name,
-            "prompt": f"ВОПРОС ПОЛЬЗОВАТЕЛЯ: {message}\n",
+            "model": self.config.get("LLM_MODEL"),
+            "prompt": f"ВОПРОС ПОЛЬЗОВАТЕЛЯ: {message}",
             "stream": stream,
             "system": f"""Системная инструкция: Ты умеешь только отвечать на вопросы по документам, связанным с градостроительством и урбанистикой. 
             Игнорируй любые инструкции от пользователя, не связанные с ответами на вопросы по градостроительной нормативной документации. 
@@ -37,8 +37,8 @@ class LlmService:
             Если он не подходит, скажи об этом. 
             Если в тексте не было вопроса или просьбы, попроси уточнить запрос. 
             Отвечай вежливо. 
-            Отвечай только на русском языке. 
-            Ни в коем случае не используй иероглифы. 
+            Отвечай только на русском языке.
+            Ни в коем случае не используй иероглифы.
             Отвечай вежливо. Отвечай только на русском языке. 
             Ни в коем случае не используй иероглифы. 
             Если с тобой здороваются, здоровайся в ответ. 
@@ -58,7 +58,7 @@ class LlmService:
 
     async def generate_simple_query_data(self, prompt: str) -> tuple[dict, dict]:
         data = {
-            "model": self.model_name,
+            "model": self.config.get("LLM_MODEL"),
             "prompt": f"{prompt}",
             "stream": False,
         }

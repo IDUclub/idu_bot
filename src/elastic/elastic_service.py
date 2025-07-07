@@ -142,8 +142,8 @@ class ElasticService:
             "knn": {
                 "field": "body_vector",
                 "query_vector": embedding,
-                "k": 20,
-                "num_candidates": 20,
+                "k": int(self.config.get("ELASTIC_K")),
+                "num_candidates": int(self.config.get("NUM_CANDIDATES")),
             },
             "_source": ["body"],
         }
