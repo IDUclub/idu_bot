@@ -146,6 +146,7 @@ class ElasticService:
                 "num_candidates": int(self.config.get("NUM_CANDIDATES")),
             },
             "_source": ["body"],
+            "min_score": float(self.config.get("MIN_SCORE")),
         }
         return self.client.search(index=index_name, body=query_body)
 
@@ -215,7 +216,7 @@ class ElasticService:
         table_questions_num: int,
     ):
         if not self.client.indices.exists(index=index_name):
-            await self.create_index(index_name)
+            await self.create_index(index_name, self.index_mapper[index_name])
         documents = []
         full_doc = Document(io.BytesIO(file))
         last_id = await self.get_last_index(index_name)
