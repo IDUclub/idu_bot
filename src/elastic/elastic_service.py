@@ -99,6 +99,15 @@ class ElasticService:
                             },
                             "body": {"type": "text"},
                             "num_id": {"type": "long"},
+                            "doc_name": {
+                                "type": "text",
+                                "fields": {
+                                    "keywords":
+                                        {
+                                            "type": "keyword",
+                                        }
+                                }
+                            },
                         }
                     }
                 },
@@ -161,7 +170,7 @@ class ElasticService:
             return last_id_data.body["hits"]["hits"][0]["_source"]["num_id"]
         return 0
 
-    async def create_doc_to_upload(self, text: str, doc_id: int) -> dict[
+    async def create_doc_to_upload(self, text: str, doc_id: int, doc_name: str) -> dict[
         str,
         str,
     ]:
@@ -172,6 +181,7 @@ class ElasticService:
             "num_id": doc_id,
             "body": text,
             "body_vector": vector,
+            "doc_name": doc_name,
         }
 
     async def create_table_to_upload(
@@ -179,6 +189,7 @@ class ElasticService:
         table_with_context: tuple[str, str, str],
         num_questions: int,
         last_doc_id: int,
+        doc_name: str
     ) -> tuple[list[dict[str, str | int]], int]:
 
         docs_to_add = []
@@ -194,6 +205,7 @@ class ElasticService:
                         "num_id": last_doc_id + i,
                         "body": text,
                         "body_vector": self.encode(text),
+                        "doc_name": doc_name
                     }
                 )
             else:
@@ -203,6 +215,7 @@ class ElasticService:
                         "num_id": last_doc_id + i,
                         "body": text,
                         "body_vector": self.encode(table_questions[i - 1]),
+                        "doc_name": doc_name
                     }
                 )
 
@@ -211,6 +224,7 @@ class ElasticService:
     async def upload_to_index(
         self,
         file: bytes,
+        doc_name: str,
         index_name: str,
         table_context_size: int,
         table_questions_num: int,
@@ -229,7 +243,7 @@ class ElasticService:
         ):
             if entity[1] == "text":
                 text = entity[0]
-                doc_to_upload = await self.create_doc_to_upload(text, last_id)
+                doc_to_upload = await self.create_doc_to_upload(text, last_id, doc_name)
                 documents.append(doc_to_upload)
                 last_id += 1
             elif entity[1] == "table":
@@ -254,7 +268,7 @@ class ElasticService:
                     logger.exception(e)
                     raise HTTPException(status_code=500, detail=e.__str__())
                 docs, last_id = await self.create_table_to_upload(
-                    table_with_context, table_questions_num, last_id
+                    table_with_context, table_questions_num, last_id, doc_name
                 )
                 documents += docs
 
