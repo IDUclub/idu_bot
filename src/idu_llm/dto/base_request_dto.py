@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 
-from src.dependencies import http_exception
 from src.common.constants.index_mapper import reverse_index_mapper
+from src.dependencies import http_exception
 
 
 class BaseLlmRequest(BaseModel):
@@ -16,7 +16,7 @@ class BaseLlmRequest(BaseModel):
     @field_validator("index_name", mode="after")
     @classmethod
     def validate_index(cls, value: str) -> str:
-        if name:=reverse_index_mapper.get(value):
+        if name := reverse_index_mapper.get(value):
             return name
         raise http_exception(
             400,

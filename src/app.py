@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from src.bot import bot
 from src.elastic.elastic_controller import elastic_router
 from src.idu_llm.idu_llm_controller import idu_llm_router
+
 from .dependencies import elastic_client
 
 

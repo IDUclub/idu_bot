@@ -7,10 +7,14 @@ import requests
 from loguru import logger
 from telebot.async_telebot import AsyncTeleBot
 from telebot.asyncio_helper import ApiTelegramException
-from telebot.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
+from telebot.types import (
+    BotCommand,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
 
 from src.dependencies import elastic_client, llm_service, model
-
 
 bot = AsyncTeleBot(elastic_client.config.get("TG_TOKEN"), parse_mode=None)
 cnt = 0
@@ -23,9 +27,10 @@ freq_limit_amount_per_second = 4
 
 
 commands = [
-    BotCommand('start', 'Запустить бота'),
-    BotCommand('menu', 'Открыть главное меню'),
+    BotCommand("start", "Запустить бота"),
+    BotCommand("menu", "Открыть главное меню"),
 ]
+
 
 async def show_categories(message):
 
@@ -33,38 +38,47 @@ async def show_categories(message):
 
     for index in list(elastic_client.index_mapper.values()):
         en_index = elastic_client.reverse_index_mapper.get(index)
-        result = elastic_client.client.search(index=en_index, body={"query": {"match_all": {}}})
+        result = elastic_client.client.search(
+            index=en_index, body={"query": {"match_all": {}}}
+        )
         if result.body["hits"]["total"]["value"] == 0:
             index_title = index + "\u274c"
         else:
             index_title = index + "\u2705"
         markup.add(
-        InlineKeyboardButton(
-            index_title,
-            callback_data=index,
+            InlineKeyboardButton(
+                index_title,
+                callback_data=index,
+            )
         )
-    )
     markup.add(InlineKeyboardButton("← Назад", callback_data="back_main"))
     await bot.edit_message_text(
         "Выберите стадию:",
         chat_id=message.chat.id,
         message_id=message.message_id,
-        reply_markup=markup
+        reply_markup=markup,
     )
+
 
 async def choose_index(chat_id, index_name: str):
 
-    if (elastic_index:=elastic_client.reverse_index_mapper.get(index_name)) is None:
+    if (elastic_index := elastic_client.reverse_index_mapper.get(index_name)) is None:
         await bot.send_message(chat_id, "Такой стадии не существует")
     elastic_res = elastic_client.client.search(index=elastic_index)
     if elastic_res.body["hits"]["total"]["value"] == 0:
-        await bot.send_message(chat_id, f"Стадия {index_name} не содержит документов и не доступна в этот момент")
+        await bot.send_message(
+            chat_id,
+            f"Стадия {index_name} не содержит документов и не доступна в этот момент",
+        )
         return
     users_settings[chat_id] = elastic_index
-    await bot.send_message(chat_id, f'В качестве стадии выбрана "{elastic_client.index_mapper.get(elastic_index)}"')
+    await bot.send_message(
+        chat_id,
+        f'В качестве стадии выбрана "{elastic_client.index_mapper.get(elastic_index)}"',
+    )
 
 
-@bot.message_handler(commands=['menu'])
+@bot.message_handler(commands=["menu"])
 async def show_menu(message):
     # Создаем клавиатуру меню
     markup = InlineKeyboardMarkup(row_width=2)
@@ -75,10 +89,7 @@ async def show_menu(message):
 
     # Отправляем сообщение с меню
     await bot.send_message(
-        message.chat.id,
-        "📱 *Главное меню*",
-        parse_mode="Markdown",
-        reply_markup=markup
+        message.chat.id, "📱 *Главное меню*", parse_mode="Markdown", reply_markup=markup
     )
 
 
@@ -94,11 +105,7 @@ async def send_welcome(message):
 
     index_button = InlineKeyboardButton("Выбрать стадию", callback_data="phase")
     markup.add(index_button)
-    await bot.send_message(
-        message.chat.id,
-        "Выберите действие:",
-        reply_markup=markup
-    )
+    await bot.send_message(message.chat.id, "Выберите действие:", reply_markup=markup)
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -120,7 +127,7 @@ async def echo(message: Message):
     print(
         f"{datetime.now().strftime('%d.%m %H:%M')} from {message.from_user.username} accepted: {message.text}"
     )
-    if (index_name:=users_settings.get(message.chat.id)) is None:
+    if (index_name := users_settings.get(message.chat.id)) is None:
         await bot.reply_to(message, "Вы не выбрали стадию, сначала выберите стадию")
         return
     try:

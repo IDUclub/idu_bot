@@ -42,21 +42,25 @@ class ElasticService:
     async def get_available_indexes(self) -> list[str]:
 
         all_indices = self.client.indices.get_alias(index="*")
-        index_list =  [
+        index_list = [
             index
             for index in all_indices
             if not index.startswith(".") and not index.startswith("_")
         ]
 
-        indexes_ru_name = [self.index_mapper.get(index) for index in index_list if self.index_mapper.get(index)]
+        indexes_ru_name = [
+            self.index_mapper.get(index)
+            for index in index_list
+            if self.index_mapper.get(index)
+        ]
         return indexes_ru_name
 
     async def update_index_mapping(
-            self,
-            index_map: dict[str, str],
+        self,
+        index_map: dict[str, str],
     ) -> str:
 
-        #ToDo Add mapping
+        # ToDo Add mapping
         try:
             self.index_mapper.update(index_map)
             # with open ("./cache/index_mapper.json", "w") as index_mapper_file:
@@ -70,7 +74,7 @@ class ElasticService:
                 _input=index_map,
                 _detail={
                     "error": e.__str__(),
-                }
+                },
             )
 
     async def create_index(self, index_name: str, en: str):
@@ -80,9 +84,7 @@ class ElasticService:
                 400,
                 "Index already exists.",
                 _input={"index": en},
-                _detail={
-                    "existing)_indexes": list(self.index_mapper.keys())
-                }
+                _detail={"existing)_indexes": list(self.index_mapper.keys())},
             )
 
         try:
@@ -102,11 +104,10 @@ class ElasticService:
                             "doc_name": {
                                 "type": "text",
                                 "fields": {
-                                    "keywords":
-                                        {
-                                            "type": "keyword",
-                                        }
-                                }
+                                    "keywords": {
+                                        "type": "keyword",
+                                    }
+                                },
                             },
                         }
                     }
@@ -142,7 +143,9 @@ class ElasticService:
             logger.exception(e)
             raise HTTPException(status_code=500, detail=e.__str__())
 
-    async def search(self, embedding: list, index_name: str | None=None) -> ObjectApiResponse:
+    async def search(
+        self, embedding: list, index_name: str | None = None
+    ) -> ObjectApiResponse:
 
         if index_name is None:
             index_name = self.config.get("ELASTIC_DOCUMENT_INDEX")
@@ -189,7 +192,7 @@ class ElasticService:
         table_with_context: tuple[str, str, str],
         num_questions: int,
         last_doc_id: int,
-        doc_name: str
+        doc_name: str,
     ) -> tuple[list[dict[str, str | int]], int]:
 
         docs_to_add = []
@@ -205,7 +208,7 @@ class ElasticService:
                         "num_id": last_doc_id + i,
                         "body": text,
                         "body_vector": self.encode(text),
-                        "doc_name": doc_name
+                        "doc_name": doc_name,
                     }
                 )
             else:
@@ -215,7 +218,7 @@ class ElasticService:
                         "num_id": last_doc_id + i,
                         "body": text,
                         "body_vector": self.encode(table_questions[i - 1]),
-                        "doc_name": doc_name
+                        "doc_name": doc_name,
                     }
                 )
 
@@ -253,14 +256,18 @@ class ElasticService:
                         "\n".join(
                             [
                                 i[0]
-                                for i in dock_blocks[max(index - table_context_size, 0) : index] if i[1] == "text"
+                                for i in dock_blocks[
+                                    max(index - table_context_size, 0) : index
+                                ]
+                                if i[1] == "text"
                             ]
                         ),
                         table_data,
                         "\n".join(
                             [
                                 i[0]
-                                for i in dock_blocks[index : index + table_context_size] if i[1] == "text"
+                                for i in dock_blocks[index : index + table_context_size]
+                                if i[1] == "text"
                             ]
                         ),
                     )
