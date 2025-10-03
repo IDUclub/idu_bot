@@ -8,3 +8,4 @@ DECFILE
 venv
 *.ipynb
 */data
+*.venv

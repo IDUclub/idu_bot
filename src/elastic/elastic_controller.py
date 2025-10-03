@@ -32,6 +32,7 @@ async def upload_document(
 ):
     return await elastic_client.upload_to_index(
         await file.read(),
+        dto.doc_name,
         dto.index_name,
         dto.table_context_size,
         dto.table_questions_num,

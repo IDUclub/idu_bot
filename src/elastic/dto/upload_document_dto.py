@@ -5,6 +5,9 @@ from src.common.exceptions.http_exception import http_exception
 
 class UploadDocumentDTO(BaseModel):
 
+    doc_name: str = Field(
+        description="name of document to save as property in elasticsearch database"
+    )
     index_name: str = Field(description="index name in elastic")
     table_context_size: int = Field(
         default=5, examples=[5], description="table context size in paragraphs"
