@@ -48,7 +48,7 @@ async def websocket_llm_endpoint(websocket: WebSocket) -> NoReturn:
         request = await websocket.receive_json()
         message_info = BaseLlmRequest(**request)
         async for text in idu_llm_client.generate_stream_response(message_info):
-            if text:
+            if text != False:
                 await websocket.send_text(text)
             else:
                 await websocket.close(1000, "Stream ended")

@@ -1,4 +1,5 @@
 import json
+from typing import AsyncIterator
 
 import requests
 
@@ -90,9 +91,12 @@ class IduLLMService:
             )
         return llm_response.json()
 
-    async def generate_stream_response(self, message_info: BaseLlmRequest):
+    async def generate_stream_response(
+        self, message_info: BaseLlmRequest
+    ) -> AsyncIterator[str | bool]:
         try:
             embedding = self.vectorizer_model.embed(message_info.user_request)
+            yield "Формирую контекст\n"
         except Exception as e:
             raise http_exception(
                 500,
@@ -104,6 +108,7 @@ class IduLLMService:
             elastic_response = await self.elastic_client.search(
                 embedding, message_info.index_name
             )
+            yield "Анализирую информацию\n"
         except Exception as e:
             raise http_exception(
                 500,
