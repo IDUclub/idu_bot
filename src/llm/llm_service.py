@@ -50,7 +50,7 @@ class LlmService:
                 "temperature": 0.5,
                 "num_predict": 4096,
             },
-            "think": False,
+            "think": True,
         }
         print(context)
         headers = {"Content-Type": "application/json"}
