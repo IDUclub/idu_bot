@@ -35,6 +35,7 @@ async def upload_document(
         dto.doc_name,
         dto.index_name,
         dto.table_context_size,
+        dto.text_questions_num,
         dto.table_questions_num,
     )
 

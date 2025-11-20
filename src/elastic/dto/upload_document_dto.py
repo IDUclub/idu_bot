@@ -12,6 +12,9 @@ class UploadDocumentDTO(BaseModel):
     table_context_size: int = Field(
         default=5, examples=[5], description="table context size in paragraphs"
     )
+    text_questions_num: int = Field(
+        default=10, examples=[10], description="number of text questions"
+    )
     table_questions_num: int = Field(
         default=10, examples=[10], description="number of questions for table"
     )

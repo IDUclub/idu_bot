@@ -187,6 +187,37 @@ class ElasticService:
             "doc_name": doc_name,
         }
 
+    async def create_paragraph_to_upload(
+        self, text: str, num_questions: int, last_doc_id: int, doc_name: str
+    ) -> tuple[list[dict[str, str | int]], int]:
+
+        docs_to_add = []
+        text_questions = await self.llm_service.generate_text_description(
+            text, num_questions
+        )
+        for i in range(1, len(text_questions) + 2):
+            if i > len(text_questions):
+                docs_to_add.append(
+                    {
+                        "_id": str(last_doc_id + i),
+                        "num_id": last_doc_id + i,
+                        "body": text,
+                        "body_vector": self.encode(text),
+                        "doc_name": doc_name,
+                    }
+                )
+            else:
+                docs_to_add.append(
+                    {
+                        "_id": str(last_doc_id + i),
+                        "num_id": last_doc_id + i,
+                        "body": text,
+                        "body_vector": self.encode(text_questions[i - 1]),
+                        "doc_name": doc_name,
+                    }
+                )
+            return docs_to_add, last_doc_id + len(text_questions) + 1
+
     async def create_table_to_upload(
         self,
         table_with_context: tuple[str, str, str],
@@ -207,7 +238,7 @@ class ElasticService:
                         "_id": str(last_doc_id + i),
                         "num_id": last_doc_id + i,
                         "body": text,
-                        "body_vector": self.encode(text),
+                        "body_vector": self.encode(table_questions[i - 1]),
                         "doc_name": doc_name,
                     }
                 )
@@ -230,6 +261,7 @@ class ElasticService:
         doc_name: str,
         index_name: str,
         table_context_size: int,
+        text_questions_num: int,
         table_questions_num: int,
     ):
         if not self.client.indices.exists(index=index_name):
@@ -246,9 +278,10 @@ class ElasticService:
         ):
             if entity[1] == "text":
                 text = entity[0]
-                doc_to_upload = await self.create_doc_to_upload(text, last_id, doc_name)
-                documents.append(doc_to_upload)
-                last_id += 1
+                docs, last_id = await self.create_paragraph_to_upload(
+                    text, text_questions_num, last_id, doc_name
+                )
+                documents += docs
             elif entity[1] == "table":
                 table_data = entity[0]
                 try:
