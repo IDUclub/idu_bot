@@ -1,5 +1,6 @@
 import requests
 from loguru import logger
+from telebot.apihelper import answer_web_app_query
 
 from src.common.config.config import Config
 
@@ -65,6 +66,24 @@ class LlmService:
         headers = {"Content-Type": "application/json"}
         return headers, data
 
+    async def generate_description(self, prompt: str) -> list[str]:
+
+        headers, data = await self.generate_simple_query_data(prompt)
+        questions = await self.generate_response(headers, data)
+        questions = questions.split("\n")
+        return questions
+
+    async def generate_text_description(
+        self, text: str, num_questions: int
+    ) -> list[str]:
+
+        prompt = f"""
+                  Придумай {num_questions} вопросов к следующему тексту. Каждый вопрос в ответе должен начинаться с новой строчки:
+                  {text}
+                  """
+
+        return await self.generate_description(prompt)
+
     async def generate_table_description(
         self, table_data: str, num_questions: int
     ) -> list[str] | None:
@@ -74,7 +93,4 @@ class LlmService:
                   {table_data}
                   """
 
-        headers, data = await self.generate_simple_query_data(prompt)
-        questions = await self.generate_response(headers, data)
-        questions = questions.split("\n")
-        return questions
+        return await self.generate_description(prompt)
