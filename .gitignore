@@ -6,6 +6,6 @@ DECFILE
 *.xlsx
 .env.*
 venv
-*.ipynb
 */data
 *.venv
+/project_context_data
