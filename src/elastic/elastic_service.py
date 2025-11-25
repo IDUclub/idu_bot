@@ -162,6 +162,125 @@ class ElasticService:
         }
         return self.client.search(index=index_name, body=query_body)
 
+    async def search_scenario(
+        self, embedding: list, index_name: str, object_id_value: int
+    ) -> ObjectApiResponse:
+
+        query_body = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {
+                            "knn": {
+                                "field": "body_vector",
+                                "query_vector": embedding,
+                                "k": int(self.config.get("ELASTIC_K")),
+                                "num_candidates": int(
+                                    self.config.get("NUM_CANDIDATES")
+                                ),
+                            }
+                        },
+                    ]
+                }
+            },
+            "_source": ["body"],
+            "min_score": float(self.config.get("MIN_SCORE")),
+        }
+        if object_id_value:
+            query_body["query"]["bool"]["must"].append(
+                {"term": {"object_id": object_id_value}}
+            )
+        return self.client.search(index=index_name, body=query_body)
+
+    @staticmethod
+    async def create_analyze_scenario_row_to_upload(
+        text: str,
+        doc_id: int,
+        object_id: int,
+        vector: list,
+        location: dict,
+        properties: dict,
+    ):
+
+        return {
+            "_id": str(doc_id),
+            "num_id": doc_id,
+            "text": text,
+            "doc_id": doc_id,
+            "object_id": object_id,
+            "vector": vector,
+            "location": location,
+            "properties": properties,
+        }
+
+    @staticmethod
+    async def create_general_scenario_row_to_upload(
+        text: str,
+        doc_id: int,
+        vector: list,
+        feature_collection: dict,
+    ):
+
+        return {
+            "_id": str(doc_id),
+            "num_id": doc_id,
+            "body": text,
+            "body_vector": vector,
+            "feature_collection": feature_collection,
+        }
+
+    async def upload_analyze_scenario(
+        self, index_name: str, data_to_upload: list, num_questions: int = 20
+    ):
+
+        num_ids = 0
+        docs_to_upload = []
+        for row in data_to_upload:
+            text_questions = await self.llm_service.generate_text_description(
+                row["text"], num_questions
+            )
+            for question in text_questions:
+                num_ids += 1
+                vector = self.encode(question)
+                current_doc = await self.create_analyze_scenario_row_to_upload(
+                    row["text"],
+                    num_ids,
+                    row["object_id"],
+                    vector,
+                    row["location"],
+                    row["properties"],
+                )
+                docs_to_upload.append(current_doc)
+
+        if docs_to_upload:
+            bulk(self.client, docs_to_upload, index=index_name, request_timeout=1200)
+        return index_name
+
+    async def upload_common_scenario(
+        self, index_name: str, data_to_upload: list, num_questions: int = 20
+    ):
+
+        num_ids = 0
+        docs_to_upload = []
+        for row in data_to_upload:
+            text_questions = await self.llm_service.generate_text_description(
+                row["text"], num_questions
+            )
+            for question in text_questions:
+                num_ids += 1
+                vector = self.encode(question)
+                current_doc = await self.create_general_scenario_row_to_upload(
+                    row["text"],
+                    num_ids,
+                    vector,
+                    row["feature_collection"],
+                )
+                docs_to_upload.append(current_doc)
+
+        if docs_to_upload:
+            bulk(self.client, docs_to_upload, index=index_name, request_timeout=1200)
+        return index_name
+
     async def get_last_index(self, index_name: str) -> int:
         query_body = {"size": 1, "sort": [{"num_id": {"order": "desc"}}]}
         try:
@@ -173,10 +292,12 @@ class ElasticService:
             return last_id_data.body["hits"]["hits"][0]["_source"]["num_id"]
         return 0
 
-    async def create_doc_to_upload(self, text: str, doc_id: int, doc_name: str) -> dict[
-        str,
-        str,
-    ]:
+    async def create_doc_to_upload(
+        self,
+        text: str,
+        doc_id: int,
+        doc_name: str,
+    ) -> dict[str, str | list]:
 
         vector = self.encode(text)
         return {
@@ -314,7 +435,6 @@ class ElasticService:
 
         if documents:
             bulk(self.client, documents, index=index_name, request_timeout=1200)
-        print("Finished")
         return index_name
 
     def encode(self, document: str) -> list:

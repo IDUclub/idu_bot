@@ -1,3 +1,4 @@
+import json
 from typing import NoReturn
 
 from fastapi import APIRouter, WebSocket
@@ -5,13 +6,14 @@ from fastapi import APIRouter, WebSocket
 from src.dependencies import idu_llm_client
 
 from .dto.base_request_dto import BaseLlmRequest
+from .dto.scenario_request_dto import ScenarioRequestDTO
 
 idu_llm_router = APIRouter()
 
 
 @idu_llm_router.post("/generate")
 async def generate(
-    message_info: BaseLlmRequest,
+    message_info: BaseLlmRequest | ScenarioRequestDTO,
 ):
     """
     Main function to generate response through bot api
@@ -25,7 +27,8 @@ async def generate(
         response (dict): Generated response
     """
 
-    response = await idu_llm_client.generate_response(message_info)
+    if message_info.isinstance(BaseLlmRequest):
+        response = await idu_llm_client.generate_response(message_info)
     return response
 
 
@@ -47,10 +50,26 @@ async def websocket_llm_endpoint(websocket: WebSocket) -> NoReturn:
     try:
         request = await websocket.receive_json()
         message_info = BaseLlmRequest(**request)
-        async for text in idu_llm_client.generate_stream_response(message_info):
-            if text != False:
-                await websocket.send_text(text)
-            else:
-                await websocket.close(1000, "Stream ended")
+        if message_info.index_name == "Информация проекта":
+            async for text in idu_llm_client.generate_scenario_stream_response(
+                message_info
+            ):
+                if text != False:
+                    if isinstance(text, str):
+                        await websocket.send_text(
+                            json.dumps({"type": "text", "chunk": text})
+                        )
+                    elif isinstance(text, list):
+                        await websocket.send_json(
+                            json.dumps({"type": "feature_collections", "chunk": text})
+                        )
+        else:
+            async for text in idu_llm_client.generate_simple_stream_response(
+                message_info
+            ):
+                if text != False:
+                    await websocket.send_text(text)
+                else:
+                    await websocket.close(1000, "Stream ended")
     except Exception as e:
         await websocket.close(code=1011, reason=e.__str__())

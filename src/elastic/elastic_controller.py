@@ -5,6 +5,7 @@ from fastapi import APIRouter, Body, Depends, Query, UploadFile
 from src.dependencies import config, elastic_client
 from src.elastic.dto.elastic_search_dto import ElasticSearchDTO
 from src.elastic.dto.upload_document_dto import UploadDocumentDTO
+from src.elastic.dto.upload_scenario_dto import UploadScenarioDTO
 
 elastic_router = APIRouter()
 tag = ["LLM Controller"]
@@ -21,9 +22,30 @@ async def create_index(index_name: str, en: str):
     return await elastic_client.create_index(index_name, en)
 
 
+@elastic_router.get("llm/scenario/modes", tags=tag)
+async def get_scenario_modes() -> list[str]:
+
+    return ["Анализ объекта", "Анализ территории проекта", "Анали по объектам проекта"]
+
+
 @elastic_router.put("llm/index_map", tags=tag)
 async def update_index_map(map: dict[str, str]):
     return await elastic_client.update_index_mapping(map)
+
+
+@elastic_router.post("/llm/scenario/upload_data", tags=tag)
+async def upload_data_to_scenario_index(
+    dto: Annotated[UploadScenarioDTO, Depends(UploadScenarioDTO)],
+):
+
+    if dto.mode == "Анализ территории проекта":
+        return await elastic_client.upload_common_scenario(
+            f"{dto.scenario_id}&{dto.get_mode_index()}", dto.data
+        )
+    else:
+        return await elastic_client.upload_analyze_scenario(
+            f"{dto.scenario_id}&{dto.get_mode_index()}", dto.data
+        )
 
 
 @elastic_router.post("/llm/upload_document", tags=tag)
