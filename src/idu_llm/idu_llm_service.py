@@ -2,6 +2,7 @@ import json
 from typing import AsyncIterator
 
 import requests
+from loguru import logger
 
 from src.common.exceptions.http_exception import http_exception
 from src.elastic.elastic_service import ElasticService
@@ -151,6 +152,7 @@ class IduLLMService:
             embedding = self.vectorizer_model.embed(message_info.user_request)
             yield "Формирую контекст\n"
         except Exception as e:
+            logger.error(e)
             raise http_exception(
                 500,
                 "Error during creating embedding",
@@ -163,6 +165,7 @@ class IduLLMService:
             )
             yield "Анализирую информацию\n"
         except Exception as e:
+            logger.error(e)
             raise http_exception(
                 500,
                 "Error during creating extracting elastic document",
@@ -172,9 +175,14 @@ class IduLLMService:
                 },
                 _detail=e.__str__(),
             )
-        context = ";".join(
-            [resp["_source"]["body"].rstrip() for resp in elastic_response]
-        )
+        if message_info.get_mode_index() == "analyze":
+            context = ";".join(
+                [resp["_source"]["text"].rstrip() for resp in elastic_response]
+            )
+        else:
+            context = ";".join(
+                [resp["_source"]["body"].rstrip() for resp in elastic_response]
+            )
         if message_info.get_mode_index() == "general":
             feature_collections = [
                 resp["_source"]["feature_collection"] for resp in elastic_response

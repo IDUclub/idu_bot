@@ -2,6 +2,7 @@ import json
 from typing import NoReturn
 
 from fastapi import APIRouter, WebSocket
+from loguru import logger
 
 from src.dependencies import idu_llm_client
 
@@ -75,5 +76,6 @@ async def websocket_llm_endpoint(websocket: WebSocket) -> NoReturn:
                 else:
                     await websocket.close(1000, "Stream ended")
     except Exception as e:
+        logger.exception(e)
         await websocket.send_text(repr(e))
         await websocket.close(code=1011, reason=e.__str__())

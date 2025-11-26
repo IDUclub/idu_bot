@@ -4,6 +4,7 @@ from .base_request_dto import BaseLlmRequest
 from .scenario_request_dto import ScenarioRequestDTO
 
 
+# TODO revise ws request validator
 def validate_in_order(message_info: dict):
 
     errors = []

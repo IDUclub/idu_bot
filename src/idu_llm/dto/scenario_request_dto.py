@@ -44,7 +44,7 @@ class ScenarioRequestDTO(BaseLlmRequest):
     def get_mode_index(self) -> str:
 
         match self.mode:
-            case "Анализ oбъекта":
+            case "Анализ объекта":
                 return "analyze"
             case "Анализ по объектам проекта":
                 return "analyze"

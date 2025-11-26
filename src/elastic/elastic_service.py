@@ -232,7 +232,7 @@ class ElasticService:
                 "field": "body_vector",
                 "query_vector": embedding,
                 "k": int(self.config.get("ELASTIC_K")),
-                "num_candidates": int(self.config.get("NUM_CANDIDATES")),
+                "num_candidates": 30,
             },
         }
 
@@ -241,7 +241,7 @@ class ElasticService:
                 "bool": {"filter": [{"term": {"object_id": object_id_value}}]}
             }
 
-        response = self.client.knn_search(index=index_name, body=query_body)
+        response = self.client.search(index=index_name, body=query_body)
         response_list = []
         for i in response["hits"]["hits"]:
             if i not in response_list:
