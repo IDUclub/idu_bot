@@ -1,0 +1,20 @@
+from pydantic import ValidationError
+
+from .base_request_dto import BaseLlmRequest
+from .scenario_request_dto import ScenarioRequestDTO
+
+
+# TODO revise ws request validator
+def validate_in_order(message_info: dict):
+
+    errors = []
+    try:
+        return ScenarioRequestDTO(**message_info)
+    except Exception as e:
+        errors.append(e)
+    try:
+        return BaseLlmRequest(**message_info)
+    except Exception as e:
+        errors.append(e)
+
+    raise ValidationError(errors)
