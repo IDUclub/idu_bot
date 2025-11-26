@@ -8,11 +8,11 @@ def validate_in_order(message_info: dict):
 
     errors = []
     try:
-        return BaseLlmRequest(**message_info)
+        return ScenarioRequestDTO(**message_info)
     except Exception as e:
         errors.append(e)
     try:
-        return ScenarioRequestDTO(**message_info)
+        return BaseLlmRequest(**message_info)
     except Exception as e:
         errors.append(e)
 

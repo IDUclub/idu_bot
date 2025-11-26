@@ -159,7 +159,7 @@ class IduLLMService:
             )
         try:
             elastic_response = await self.elastic_client.search_scenario(
-                embedding, message_info.index_name, message_info.object_id
+                embedding, index_name, message_info.object_id
             )
             yield "Анализирую информацию\n"
         except Exception as e:
@@ -173,15 +173,11 @@ class IduLLMService:
                 _detail=e.__str__(),
             )
         context = ";".join(
-            [
-                resp["_source"]["body"].rstrip()
-                for resp in elastic_response["hits"]["hits"]
-            ]
+            [resp["_source"]["body"].rstrip() for resp in elastic_response]
         )
         if message_info.get_mode_index() == "general":
             feature_collections = [
-                resp["_source"]["feature_collection"]
-                for resp in elastic_response["hits"]["hits"]
+                resp["_source"]["feature_collection"] for resp in elastic_response
             ]
         elif message_info.get_mode_index() == "analyze" and message_info.object_id:
             feature_collections = None
@@ -192,7 +188,7 @@ class IduLLMService:
                     "geometry": resp["_source"]["location"],
                     "properties": resp["_source"]["properties"],
                 }
-                for resp in elastic_response["hits"]["hits"]
+                for resp in elastic_response
             ]
             feature_collections = [{"type": "FeatureCollection", "features": features}]
         yield feature_collections

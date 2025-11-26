@@ -26,7 +26,7 @@ class ScenarioRequestDTO(BaseLlmRequest):
     @model_validator(mode="after")
     def validate_fields(self):
 
-        if self.index_name != "Информация проекта":
+        if self.index_name != "project":
             raise http_exception(
                 400,
                 "Request to scenario index can have only 'Информация проекта' index name",
@@ -46,7 +46,7 @@ class ScenarioRequestDTO(BaseLlmRequest):
         match self.mode:
             case "Анализ oбъекта":
                 return "analyze"
-            case "Анали по объектам проекта":
+            case "Анализ по объектам проекта":
                 return "analyze"
             case "Анализ территории проекта":
                 return "general"

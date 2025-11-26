@@ -18,7 +18,7 @@ class UploadScenarioDTO(BaseModel):
         match self.mode:
             case "Анализ oбъекта":
                 return "analyze"
-            case "Анали по объектам проекта":
+            case "Анализ по объектам проекта":
                 return "analyze"
             case "Анализ территории проекта":
                 return "general"
