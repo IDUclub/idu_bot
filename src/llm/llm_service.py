@@ -74,11 +74,19 @@ class LlmService:
         return questions
 
     async def generate_text_description(
-        self, text: str, num_questions: int
+        self,
+        text: str,
+        num_questions: int,
+        restricted: bool = False,
     ) -> list[str]:
 
+        additional_instruction = (
+            "Задавай вопрос относительно ограничений, хотя бы 2 вопроса должны быть общего характера. "
+            if restricted
+            else ""
+        )
         prompt = f"""
-                  Придумай {num_questions} вопросов к следующему тексту. Каждый вопрос в ответе должен начинаться с новой строчки:
+                  Придумай {num_questions} вопросов к следующему тексту. {additional_instruction}Каждый вопрос в ответе должен начинаться с новой строчки:
                   {text}
                   """
 
