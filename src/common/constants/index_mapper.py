@@ -7,6 +7,7 @@ index_mapper = {
     "operation": "Эксплуатационная стадия",
     "decommission": "Ликвидационная стадия",
     "project": "Информация проекта",
+    "pzz": "ПЗЗ",
 }
 
 reverse_index_mapper = {v: k for k, v in index_mapper.items()}
