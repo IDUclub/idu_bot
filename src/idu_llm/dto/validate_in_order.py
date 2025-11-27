@@ -19,7 +19,7 @@ def validate_in_order(message_info: dict):
         ):
             raise http_exception(
                 400,
-                f"Mode Анализ по объектам проекта doesn't support empty object_id value",
+                f"Mode Анализ объекта doesn't support empty object_id value",
                 _input={"request_params": message_info},
                 _detail={},
             )
