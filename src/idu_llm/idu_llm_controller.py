@@ -1,7 +1,7 @@
 import json
 from typing import NoReturn
 
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketException, status
 from loguru import logger
 
 from src.dependencies import idu_llm_client
@@ -57,6 +57,8 @@ async def websocket_llm_endpoint(websocket: WebSocket) -> NoReturn:
                 message_info
             ):
                 if text != False:
+                    if isinstance(text, dict):
+                        await websocket.send_json(json.dumps(text))
                     if isinstance(text, str):
                         await websocket.send_text(
                             json.dumps({"type": "text", "chunk": text})
@@ -75,6 +77,12 @@ async def websocket_llm_endpoint(websocket: WebSocket) -> NoReturn:
                     await websocket.send_text(text)
                 else:
                     await websocket.close(1000, "Stream ended")
+    except HTTPException as http_e:
+        logger.exception(http_e)
+        if http_e.status_code == 400:
+            json_to_send = {"http_code": http_e.status_code, **http_e.detail}
+            await websocket.send_json(json_to_send)
+            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
     except Exception as e:
         logger.exception(e)
         await websocket.send_text(repr(e))
