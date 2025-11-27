@@ -95,7 +95,7 @@ class IduLLMService:
 
     async def generate_simple_stream_response(
         self, message_info: BaseLlmRequest
-    ) -> AsyncIterator[str | bool]:
+    ) -> AsyncIterator[str | bool | list | dict]:
         try:
             embedding = self.vectorizer_model.embed(message_info.user_request)
             yield "Формирую контекст\n"
@@ -150,7 +150,7 @@ class IduLLMService:
         index_name = f"{message_info.scenario_id}&{message_info.get_mode_index()}"
         try:
             embedding = self.vectorizer_model.embed(message_info.user_request)
-            yield "Формирую контекст\n"
+            yield {"type": "status", "text": "Подготовка контекста"}
         except Exception as e:
             logger.error(e)
             raise http_exception(
@@ -163,7 +163,7 @@ class IduLLMService:
             elastic_response = await self.elastic_client.search_scenario(
                 embedding, index_name, message_info.object_id
             )
-            yield "Анализирую информацию\n"
+            yield {"type": "status", "text": "Анализ контекста"}
         except Exception as e:
             logger.error(e)
             raise http_exception(

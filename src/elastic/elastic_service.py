@@ -229,14 +229,22 @@ class ElasticService:
 
         query_body = {
             "knn": {
-                "field": "body_vector",
+                "field": "vector",
                 "query_vector": embedding,
-                "k": int(self.config.get("ELASTIC_K")),
-                "num_candidates": 30,
+                "k": int(self.config.get("SCENARIO_K")),
+                "num_candidates": int(self.config.get("SCENARIO_NUM_K")),
             },
         }
 
         if object_id_value is not None:
+            query_body = {
+                "knn": {
+                    "field": "body_vector",
+                    "query_vector": embedding,
+                    "k": int(self.config.get("SCENARIO_K")),
+                    "num_candidates": int(self.config.get("SCENARIO_NUM_K")),
+                },
+            }
             query_body["query"] = {
                 "bool": {"filter": [{"term": {"object_id": object_id_value}}]}
             }
@@ -314,6 +322,9 @@ class ElasticService:
             try:
                 bulk(
                     self.client, docs_to_upload, index=index_name, request_timeout=1200
+                )
+                logger.info(
+                    f"Uploaded {len(docs_to_upload)} docs to elastic index {index_name}"
                 )
             except BulkIndexError as e:
                 for error in e.errors:

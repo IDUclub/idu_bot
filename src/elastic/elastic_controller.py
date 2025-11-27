@@ -48,7 +48,7 @@ async def get_scenario_indexes(scenario_id: int):
 @elastic_router.get("/llm/scenario/modes", tags=tag)
 async def get_scenario_modes() -> list[str]:
 
-    return ["Анализ объекта", "Анализ территории проекта", "Анали по объектам проекта"]
+    return ["Анализ объекта", "Анализ территории проекта", "Анализ по объектам проекта"]
 
 
 @elastic_router.put("llm/index_map", tags=tag)
