@@ -150,7 +150,7 @@ class IduLLMService:
         index_name = f"{message_info.scenario_id}&{message_info.get_mode_index()}"
         try:
             embedding = self.vectorizer_model.embed(message_info.user_request)
-            yield {"type": "status", "text": "Подготовка контекста"}
+            yield {"type": "status", "chunk": "Подготовка контекста"}
         except Exception as e:
             logger.error(e)
             raise http_exception(
@@ -163,7 +163,7 @@ class IduLLMService:
             elastic_response = await self.elastic_client.search_scenario(
                 embedding, index_name, message_info.object_id
             )
-            yield {"type": "status", "text": "Анализ контекста"}
+            yield {"type": "status", "chunk": "Анализ контекста"}
         except Exception as e:
             logger.error(e)
             raise http_exception(
