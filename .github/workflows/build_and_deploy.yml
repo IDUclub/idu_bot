@@ -19,6 +19,10 @@ jobs:
         env:
           ENV_PATH: ${{secrets.ENV_PATH}}
         run: cp "$ENV_PATH"/.env.production ./
+       - name: copy_keys
+        env:
+          KEYS_PATH: ${{secrets.KEYS_PATH}}
+        run: cp -R "$KEYS_PATH"/* ./
       - name: build
         env:
           NOW: ${{steps.date.outputs.now}}
