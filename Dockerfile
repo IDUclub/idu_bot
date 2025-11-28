@@ -2,10 +2,13 @@ ARG PYTHON_VERSION=3.11.9
 FROM python:${PYTHON_VERSION}-slim as base
 
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV APP_ENV=development
+ENV APP_ENV=production
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
+
+#add pypi mirror to config
+COPY pip.conf /etc/xdg/pip/pip.conf
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \

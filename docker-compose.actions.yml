@@ -1,0 +1,10 @@
+services:
+  bot_prostor:
+    image: ${IMAGE}
+    container_name: ${CONTAINER_NAME}
+    ports:
+      - 8010:8000
+    env_file:
+      - .env.production
+    restart: always
+
