@@ -177,7 +177,7 @@ class IduLLMService:
             )
         if message_info.get_mode_index() == "analyze":
             context = ";".join(
-                [resp["_source"]["text"].rstrip() for resp in elastic_response]
+                [resp["_source"]["body"].rstrip() for resp in elastic_response]
             )
         else:
             context = ";".join(

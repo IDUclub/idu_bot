@@ -229,7 +229,7 @@ class ElasticService:
 
         query_body = {
             "knn": {
-                "field": "vector",
+                "field": "body_vector",
                 "query_vector": embedding,
                 "k": int(self.config.get("SCENARIO_K")),
                 "num_candidates": int(self.config.get("SCENARIO_NUM_K")),
@@ -237,14 +237,6 @@ class ElasticService:
         }
 
         if object_id_value is not None:
-            query_body = {
-                "knn": {
-                    "field": "body_vector",
-                    "query_vector": embedding,
-                    "k": int(self.config.get("SCENARIO_K")),
-                    "num_candidates": int(self.config.get("SCENARIO_NUM_K")),
-                },
-            }
             query_body["query"] = {
                 "bool": {"filter": [{"term": {"object_id": object_id_value}}]}
             }
@@ -258,6 +250,7 @@ class ElasticService:
 
     @staticmethod
     async def create_analyze_scenario_row_to_upload(
+        index_name: str,
         text: str,
         doc_id: int,
         object_id: int,
@@ -267,18 +260,20 @@ class ElasticService:
     ):
 
         return {
+            "_op_type": "index",
+            "_index": index_name,
             "_id": str(doc_id),
+            "body": text,
+            "body_vector": vector,
             "num_id": doc_id,
-            "text": text,
-            "doc_id": doc_id,
             "object_id": object_id,
-            "vector": vector,
             "location": location,
             "properties": properties,
         }
 
     @staticmethod
     async def create_general_scenario_row_to_upload(
+        index: str,
         text: str,
         doc_id: int,
         vector: list,
@@ -286,6 +281,8 @@ class ElasticService:
     ):
 
         return {
+            "_op_type": "index",
+            "_index": index,
             "_id": str(doc_id),
             "num_id": doc_id,
             "body": text,
@@ -306,9 +303,9 @@ class ElasticService:
                 row["text"], num_questions
             )
             for question in text_questions:
-                num_ids += 1
                 vector = self.encode(question)
                 current_doc = await self.create_analyze_scenario_row_to_upload(
+                    index_name,
                     row["text"],
                     num_ids,
                     row["object_id"],
@@ -317,6 +314,7 @@ class ElasticService:
                     row["properties"],
                 )
                 docs_to_upload.append(current_doc)
+                num_ids += 1
 
         if docs_to_upload:
             try:
@@ -348,6 +346,7 @@ class ElasticService:
                 num_ids += 1
                 vector = self.encode(question)
                 current_doc = await self.create_general_scenario_row_to_upload(
+                    index_name,
                     row["text"],
                     num_ids,
                     vector,
@@ -403,7 +402,7 @@ class ElasticService:
         text_questions = await self.llm_service.generate_text_description(
             text, num_questions
         )
-        for i in range(1, len(text_questions) + 2):
+        for i in range(1, len(text_questions)):
             if i > len(text_questions):
                 docs_to_add.append(
                     {
@@ -439,7 +438,7 @@ class ElasticService:
             table_with_context[1], num_questions
         )
         text = "\n".join(table_with_context)
-        for i in range(1, len(table_questions) + 2):
+        for i in range(1, len(table_questions)):
             if i > len(table_questions):
                 docs_to_add.append(
                     {
