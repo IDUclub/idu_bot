@@ -60,9 +60,10 @@ async def websocket_llm_endpoint(websocket: WebSocket) -> NoReturn:
                     if isinstance(text, dict):
                         await websocket.send_text(json.dumps(text))
                     if isinstance(text, str):
-                        await websocket.send_text(
-                            json.dumps({"type": "text", "chunk": text})
-                        )
+                        if text:
+                            await websocket.send_text(
+                                json.dumps({"type": "text", "chunk": text})
+                            )
                     elif isinstance(text, list):
                         await websocket.send_text(
                             json.dumps({"type": "feature_collections", "chunk": text})
