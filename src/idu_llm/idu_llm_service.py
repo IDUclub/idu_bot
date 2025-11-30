@@ -98,7 +98,7 @@ class IduLLMService:
     ) -> AsyncIterator[str | bool | list | dict]:
         try:
             embedding = self.vectorizer_model.embed(message_info.user_request)
-            yield "Формирую контекст\n"
+            yield {"type": "status", "chunk": "Подготовка контекста"}
         except Exception as e:
             raise http_exception(
                 500,
@@ -110,7 +110,7 @@ class IduLLMService:
             elastic_response = await self.elastic_client.search(
                 embedding, message_info.index_name
             )
-            yield "Анализирую информацию\n"
+            yield {"type": "status", "chunk": "Анализ контекста"}
         except Exception as e:
             raise http_exception(
                 500,
@@ -140,7 +140,7 @@ class IduLLMService:
                 for chunk in response.iter_content(chunk_size=512 * 1024):
                     chunk = json.loads(chunk)
                     if not chunk["done"]:
-                        yield chunk["response"]
+                        yield {"type": "text", "chunk": chunk["response"]}
                     else:
                         yield False
 
