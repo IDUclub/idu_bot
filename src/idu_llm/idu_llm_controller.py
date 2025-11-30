@@ -75,7 +75,10 @@ async def websocket_llm_endpoint(websocket: WebSocket) -> NoReturn:
                 message_info
             ):
                 if text != False:
-                    await websocket.send_text(text)
+                    if text["chunk"]:
+                        await websocket.send_text(json.dumps(text))
+                    else:
+                        continue
                 else:
                     await websocket.close(1000, "Stream ended")
     except HTTPException as http_e:
