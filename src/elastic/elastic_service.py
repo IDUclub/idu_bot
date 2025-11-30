@@ -228,18 +228,22 @@ class ElasticService:
         self, embedding: list, index_name: str, object_id_value: int | None
     ) -> list[str]:
 
-        query_body = {
-            "knn": {
-                "field": "body_vector",
-                "query_vector": embedding,
-                "k": int(self.config.get("SCENARIO_K")),
-                "num_candidates": int(self.config.get("SCENARIO_NUM_K")),
-            },
-        }
-
         if object_id_value is not None:
-            query_body["query"] = {
-                "bool": {"filter": [{"term": {"object_id": object_id_value}}]}
+            query_body = {
+                "query": {
+                    "term": {
+                        "object_id": object_id_value
+                    }
+                }
+            }
+        else:
+            query_body = {
+                "knn": {
+                    "field": "body_vector",
+                    "query_vector": embedding,
+                    "k": int(self.config.get("SCENARIO_K")),
+                    "num_candidates": int(self.config.get("SCENARIO_NUM_K")),
+                },
             }
 
         response = self.client.search(index=index_name, body=query_body)
