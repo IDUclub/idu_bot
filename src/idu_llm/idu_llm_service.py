@@ -146,7 +146,7 @@ class IduLLMService:
 
     async def generate_scenario_stream_response(
         self, message_info: ScenarioRequestDTO
-    ) -> AsyncIterator[str | bool | list]:
+    ) -> AsyncIterator[str | bool | list | dict]:
         index_name = f"{message_info.scenario_id}&{message_info.get_mode_index()}"
         try:
             embedding = self.vectorizer_model.embed(message_info.user_request)
@@ -201,9 +201,19 @@ class IduLLMService:
             feature_collections = [{"type": "FeatureCollection", "features": features}]
         yield feature_collections
 
-        headers, data = await self.llm_service.generate_request_data(
-            message_info.user_request, context, True
-        )
+        if "general" in index_name:
+            headers, data = await self.llm_service.generate_general_scenario_request_data(
+                message_info.user_request, context, True
+            )
+        else:
+            if message_info.object_id:
+                headers, data = await self.llm_service.generate_object_scenario_request_data(
+                    message_info.user_request, context, True
+                )
+            else:
+                headers, data = await self.llm_service.generate_scenario_request_data(
+                    message_info.user_request, context, True
+                )
         with requests.post(
             f"{self.llm_service.url}/api/generate",
             headers=headers,

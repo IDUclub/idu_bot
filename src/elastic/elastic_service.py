@@ -1,4 +1,5 @@
 import io
+import json
 
 from docx import Document
 from elastic_transport import ObjectApiResponse
@@ -310,7 +311,7 @@ class ElasticService:
                     num_ids,
                     row["object_id"],
                     vector,
-                    row["location"],
+                    json.loads(row["location"]),
                     row["properties"],
                 )
                 docs_to_upload.append(current_doc)
