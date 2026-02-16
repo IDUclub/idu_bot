@@ -6,8 +6,9 @@ from fastapi.responses import RedirectResponse
 
 from src.elastic.elastic_controller import elastic_router
 from src.idu_llm.idu_llm_controller import idu_llm_router
+from src.logs.logs_router import logs_router
 
-from .dependencies import elastic_client
+from src.dependencies import elastic_client
 
 
 @asynccontextmanager
@@ -30,6 +31,7 @@ app.add_middleware(
 
 app.include_router(elastic_router, prefix="")
 app.include_router(idu_llm_router, prefix="")
+app.include_router(logs_router, prefix="")
 
 
 @app.get("/", include_in_schema=False)
