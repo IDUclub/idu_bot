@@ -4,6 +4,7 @@ from typing import Any
 
 from loguru import logger
 
+
 def add_logger(target: Any):
 
     logger.add(
@@ -11,6 +12,7 @@ def add_logger(target: Any):
         level="INFO",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} | {message}",
     )
+
 
 def init_logs(logs_path: Path):
 

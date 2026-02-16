@@ -4,11 +4,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
+from src.dependencies import elastic_client
 from src.elastic.elastic_controller import elastic_router
 from src.idu_llm.idu_llm_controller import idu_llm_router
 from src.logs.logs_router import logs_router
-
-from src.dependencies import elastic_client
 
 
 @asynccontextmanager

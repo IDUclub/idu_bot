@@ -1,5 +1,5 @@
-from pathlib import Path
 from collections import deque
+from pathlib import Path
 
 from loguru import logger
 
@@ -20,14 +20,24 @@ class LogsService:
             logger.error("Logs file not found by path {}".format(self.logs_file_path))
             raise
         except PermissionError:
-            logger.error("Logs file access is permitted for path {}".format(self.logs_file_path))
+            logger.error(
+                "Logs file access is permitted for path {}".format(self.logs_file_path)
+            )
             raise
         except OSError as os_error:
-            logger.error("Unexpected os error while trying to access logs file {}".format(self.logs_file_path))
+            logger.error(
+                "Unexpected os error while trying to access logs file {}".format(
+                    self.logs_file_path
+                )
+            )
             logger.exception(os_error)
             raise
         except Exception as e:
-            logger.error("Unexpected exception while trying to access logs file {}".format(self.logs_file_path))
+            logger.error(
+                "Unexpected exception while trying to access logs file {}".format(
+                    self.logs_file_path
+                )
+            )
             logger.exception(e)
             raise
 

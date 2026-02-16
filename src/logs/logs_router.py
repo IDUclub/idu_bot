@@ -1,10 +1,7 @@
-from fastapi import HTTPException
-
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
 from src.dependencies import logs_service
-
 
 logs_router = APIRouter(prefix="/logs", tags=["logs"])
 
@@ -19,6 +16,7 @@ async def get_logs_file():
         return FileResponse(logs_service.logs_file_path, filename="idu_bot.log")
     except Exception as e:
         raise HTTPException(status_code=500, detail=repr(e)) from e
+
 
 @logs_router.get("/log")
 async def get_logs(length: int):
