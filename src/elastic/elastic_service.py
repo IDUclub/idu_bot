@@ -229,13 +229,7 @@ class ElasticService:
     ) -> list[str]:
 
         if object_id_value is not None:
-            query_body = {
-                "query": {
-                    "term": {
-                        "object_id": object_id_value
-                    }
-                }
-            }
+            query_body = {"query": {"term": {"object_id": object_id_value}}}
         else:
             query_body = {
                 "knn": {

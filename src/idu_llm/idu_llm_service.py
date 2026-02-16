@@ -202,13 +202,17 @@ class IduLLMService:
         yield feature_collections
 
         if "general" in index_name:
-            headers, data = await self.llm_service.generate_general_scenario_request_data(
-                message_info.user_request, context, True
+            headers, data = (
+                await self.llm_service.generate_general_scenario_request_data(
+                    message_info.user_request, context, True
+                )
             )
         else:
             if message_info.object_id:
-                headers, data = await self.llm_service.generate_object_scenario_request_data(
-                    message_info.user_request, context, True
+                headers, data = (
+                    await self.llm_service.generate_object_scenario_request_data(
+                        message_info.user_request, context, True
+                    )
                 )
             else:
                 headers, data = await self.llm_service.generate_scenario_request_data(

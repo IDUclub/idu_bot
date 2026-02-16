@@ -9,3 +9,5 @@ venv
 */data
 *.venv
 /project_context_data
+.logs
+.log
