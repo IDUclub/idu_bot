@@ -1,8 +1,5 @@
-from platform import system
-
 import requests
 from loguru import logger
-from telebot.apihelper import answer_web_app_query
 
 from src.common.config.config import Config
 

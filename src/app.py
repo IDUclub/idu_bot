@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
+from src.__version__ import APP_VERSION
+from src.common.exceptions.exception_handler import ExceptionHandlerMiddleware
 from src.dependencies import elastic_client
 from src.elastic.elastic_controller import elastic_router
 from src.idu_llm.idu_llm_controller import idu_llm_router
@@ -16,7 +18,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(lifespan=lifespan, root_path="/api/v1")
+app = FastAPI(lifespan=lifespan, root_path="/api/v1", version=APP_VERSION)
 
 origins = ["*"]
 
@@ -27,6 +29,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(ExceptionHandlerMiddleware)
 
 app.include_router(elastic_router, prefix="")
 app.include_router(idu_llm_router, prefix="")
