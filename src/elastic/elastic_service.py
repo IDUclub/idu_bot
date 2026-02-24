@@ -14,7 +14,7 @@ from src.dependencies import http_exception
 from src.llm.llm_service import LlmService
 from src.vectorizer.vectorizer_service import VectorizerService
 
-from .doc_parser import doc_parser
+from .parser import doc_parser
 
 
 class ElasticService:

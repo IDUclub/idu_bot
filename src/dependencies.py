@@ -2,6 +2,8 @@ from pathlib import Path
 
 from iduconfig import Config
 
+from src.api_clients.urban_api_client import UrbanAPIClient
+from src.common.api_handlers.json_api_handler import JSONAPIHandler
 from src.common.constants.index_mapper import index_mapper, reverse_index_mapper
 from src.common.exceptions.http_exception import http_exception
 from src.common.logging.init_logs import init_logs
