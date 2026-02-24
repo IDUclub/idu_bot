@@ -24,3 +24,13 @@ class UploadScenarioDTO(BaseModel):
                 return "general"
             case _:
                 raise Exception("Pydantic validation failed")
+
+
+class UploadCustomScenarioDTO(BaseModel):
+    index_en_name: str = (
+        Field(examples=["moscow&758"], description="Custom index name from scratch"),
+    )
+    index_ru_name: str = Field(
+        examples=["сценарий жк домашний"], description="Custom index ru name to display"
+    )
+    data: list[dict] = Field(description="Data to load to index")
