@@ -1,13 +1,17 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, Query, UploadFile
+from telebot.apihelper import answer_web_app_query
 
 from src.dependencies import config, elastic_client
 from src.elastic.dto.create_scenario_index_dto import CreateScenarioIndexDTO
 from src.elastic.dto.elastic_search_dto import ElasticSearchDTO
 from src.elastic.dto.scenario_search_dto import ScenarioSearchDTO
 from src.elastic.dto.upload_document_dto import UploadDocumentDTO
-from src.elastic.dto.upload_scenario_dto import UploadScenarioDTO
+from src.elastic.dto.upload_scenario_dto import (
+    UploadCustomScenarioDTO,
+    UploadScenarioDTO,
+)
 
 elastic_router = APIRouter()
 tag = ["LLM Controller"]
@@ -51,9 +55,19 @@ async def get_scenario_modes() -> list[str]:
     return ["Анализ объекта", "Анализ территории проекта", "Анализ по объектам проекта"]
 
 
-@elastic_router.put("llm/index_map", tags=tag)
+@elastic_router.put("/llm/index_map", tags=tag)
 async def update_index_map(map: dict[str, str]):
     return await elastic_client.update_index_mapping(map)
+
+
+@elastic_router.post("/llm/scenario/custom_scenario/data", tags=tag)
+async def upload_custom_scenario_data_to_index(
+    dto: Annotated[UploadCustomScenarioDTO, Depends(UploadCustomScenarioDTO)],
+):
+
+    res = await elastic_client.upload_common_scenario(dto.index_en_name, dto.data)
+    await elastic_client.update_index_mapper(dto.index_en_name, dto.index_ru_name)
+    return res
 
 
 @elastic_router.post("/llm/scenario/upload_data", tags=tag)

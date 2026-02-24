@@ -40,6 +40,10 @@ class ElasticService:
             if not self.client.indices.exists(index=index):
                 await self.create_index(self.index_mapper[index], index)
 
+    async def update_index_mapper(self, en: str, ru: str):
+        self.index_mapper[en] = ru
+        self.reverse_index_mapper[ru] = en
+
     async def get_all_indexes(self) -> list[str]:
 
         all_indices = self.client.indices.get_alias(index="*")
@@ -518,6 +522,9 @@ class ElasticService:
                 )
                 documents += docs
 
+        if index_name in ("moscow&758", "moscow&10078"):
+            for doc in documents:
+                doc.pop("doc_name")
         if documents:
             bulk(self.client, documents, index=index_name, request_timeout=1200)
         return index_name

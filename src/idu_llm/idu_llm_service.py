@@ -147,7 +147,10 @@ class IduLLMService:
     async def generate_scenario_stream_response(
         self, message_info: ScenarioRequestDTO
     ) -> AsyncIterator[str | bool | list | dict]:
-        index_name = f"{message_info.scenario_id}&{message_info.get_mode_index()}"
+        if message_info.scenario_id in (758, 10078):
+            index_name = f"moscow&{message_info.scenario_id}"
+        else:
+            index_name = f"{message_info.scenario_id}&{message_info.get_mode_index()}"
         try:
             embedding = self.vectorizer_model.embed(message_info.user_request)
             yield {"type": "status", "chunk": "Подготовка контекста"}
@@ -185,7 +188,9 @@ class IduLLMService:
             )
         if message_info.get_mode_index() == "general":
             feature_collections = [
-                resp["_source"]["feature_collection"] for resp in elastic_response
+                resp["_source"]["feature_collection"]
+                for resp in elastic_response
+                if resp["_source"].get("feature_collection")
             ]
         elif message_info.get_mode_index() == "analyze" and message_info.object_id:
             feature_collections = None
