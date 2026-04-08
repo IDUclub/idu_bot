@@ -77,8 +77,6 @@ class ElasticService:
         # ToDo Add mapping
         try:
             self.index_mapper.update(index_map)
-            # with open ("./cache/index_mapper.json", "w") as index_mapper_file:
-            #     json.dump(index_map, index_mapper_file)
             return "Index mapper updated."
         except Exception as e:
             logger.error(e)
@@ -426,7 +424,7 @@ class ElasticService:
                         "doc_name": doc_name,
                     }
                 )
-            return docs_to_add, last_doc_id + len(text_questions) + 1
+        return docs_to_add, last_doc_id + len(text_questions) + 1
 
     async def create_table_to_upload(
         self,

@@ -1,7 +1,6 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, Query, UploadFile
-from telebot.apihelper import answer_web_app_query
 
 from src.dependencies import config, elastic_client
 from src.elastic.dto.create_scenario_index_dto import CreateScenarioIndexDTO
