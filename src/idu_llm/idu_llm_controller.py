@@ -1,7 +1,8 @@
 import json
-from typing import NoReturn
+from typing import AsyncIterable, NoReturn
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketException, status
+from fastapi.sse import EventSourceResponse, ServerSentEvent
 from loguru import logger
 
 from src.dependencies import idu_llm_client
@@ -32,6 +33,34 @@ async def generate(
     if message_info.isinstance(BaseLlmRequest):
         response = await idu_llm_client.generate_response(message_info)
     return response
+
+
+@idu_llm_router.post("/stream/generate", response_class=EventSourceResponse)
+async def generate_stream_response(
+    message_info: BaseLlmRequest | ScenarioRequestDTO,
+) -> AsyncIterable:
+    """
+    Min function to generate response through bot api.
+    Args:
+        message_info (BaseLlmRequest): Message to send.
+    Returns:
+        response (EventSourceResponse): Sse stream response.
+    """
+
+    async for chunk in idu_llm_client.generate_simple_stream_response(message_info):
+        if isinstance(chunk, bool):
+            yield {"type": "chunk", "content": {"text": "", "done": chunk}}
+        else:
+            if chunk["type"] == "status":
+                yield {
+                    "type": "status",
+                    "content": {"status": "generation", "text": chunk["chunk"]},
+                }
+            else:
+                yield {
+                    "type": "chunk",
+                    "content": {"text": chunk["chunk"], "done": False},
+                }
 
 
 @idu_llm_router.websocket("/ws/generate")
