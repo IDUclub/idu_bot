@@ -1,7 +1,14 @@
 import json
-from typing import AsyncIterable, NoReturn
+from typing import Annotated, AsyncIterable, NoReturn
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    WebSocket,
+    WebSocketException,
+    status,
+)
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from loguru import logger
 
@@ -37,7 +44,7 @@ async def generate(
 
 @idu_llm_router.get("/stream/generate", response_class=EventSourceResponse)
 async def generate_stream_response(
-    message_info: BaseLlmRequest | ScenarioRequestDTO,
+    message_info: Annotated[BaseLlmRequest, Depends(BaseLlmRequest)],
 ) -> AsyncIterable:
     """
     Min function to generate response through bot api.
