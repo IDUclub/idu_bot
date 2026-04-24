@@ -35,7 +35,7 @@ async def generate(
     return response
 
 
-@idu_llm_router.post("/stream/generate", response_class=EventSourceResponse)
+@idu_llm_router.get("/stream/generate", response_class=EventSourceResponse)
 async def generate_stream_response(
     message_info: BaseLlmRequest | ScenarioRequestDTO,
 ) -> AsyncIterable:
