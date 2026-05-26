@@ -37,9 +37,11 @@ async def generate(
         response (dict): Generated response
     """
 
-    if message_info.isinstance(BaseLlmRequest):
+    if isinstance(message_info, BaseLlmRequest):
         response = await idu_llm_client.generate_response(message_info)
-    return response
+        return response
+    else:
+        raise HTTPException(422, detail={"message": "Only BaseLlmRequest is suppoerted for generate via post."})
 
 
 @idu_llm_router.get("/stream/generate", response_class=EventSourceResponse)
