@@ -72,6 +72,45 @@ async def generate_stream_response(
                 }
 
 
+@idu_llm_router.websocket("/ws/test/generate")
+async def websocket_test_transport_endpoint(websocket: WebSocket) -> NoReturn:
+    """WebSocket endpoint for the test transport index. Streams status and text
+    chunks and returns the isochrone geojson layer when relevant.
+
+    Expected incoming JSON: ``{"user_request": "<question>"}``.
+    """
+
+    await websocket.accept()
+    try:
+        request = await websocket.receive_json()
+        message_info = BaseLlmRequest(user_request=request["user_request"])
+        async for chunk in idu_llm_client.generate_test_transport_stream_response(
+            message_info
+        ):
+            if chunk is False:
+                await websocket.close(1000, "Stream ended")
+            elif isinstance(chunk, dict):
+                await websocket.send_text(json.dumps(chunk))
+            elif isinstance(chunk, list):
+                await websocket.send_text(
+                    json.dumps({"type": "feature_collections", "chunk": chunk})
+                )
+            elif isinstance(chunk, str) and chunk:
+                await websocket.send_text(
+                    json.dumps({"type": "text", "chunk": chunk})
+                )
+    except HTTPException as http_e:
+        logger.exception(http_e)
+        if http_e.status_code == 400:
+            json_to_send = {"http_code": http_e.status_code, **http_e.detail}
+            await websocket.send_json(json_to_send)
+            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    except Exception as e:
+        logger.exception(e)
+        await websocket.send_text(repr(e))
+        await websocket.close(code=1011, reason=e.__str__())
+
+
 @idu_llm_router.websocket("/ws/generate")
 async def websocket_llm_endpoint(websocket: WebSocket) -> NoReturn:
     """
