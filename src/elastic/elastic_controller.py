@@ -2,11 +2,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, Query, UploadFile
 
+from src.common.constants.index_mapper import TEST_TRANSPORT_INDEX
 from src.dependencies import config, elastic_client
 from src.elastic.dto.create_scenario_index_dto import CreateScenarioIndexDTO
 from src.elastic.dto.elastic_search_dto import ElasticSearchDTO
 from src.elastic.dto.scenario_search_dto import ScenarioSearchDTO
 from src.elastic.dto.upload_document_dto import UploadDocumentDTO
+from src.elastic.dto.upload_test_index_dto import UploadTestIndexDTO
 from src.elastic.dto.upload_scenario_dto import (
     UploadCustomScenarioDTO,
     UploadScenarioDTO,
@@ -96,6 +98,30 @@ async def upload_document(
         dto.text_questions_num,
         dto.table_questions_num,
     )
+
+
+@elastic_router.post("/llm/test/transport/load", tags=tag)
+async def load_test_transport_index(
+    docx_file: UploadFile,
+    geojson_file: UploadFile,
+    dto: Annotated[UploadTestIndexDTO, Depends(UploadTestIndexDTO)],
+):
+    """Load the test transport docx and geojson isochrone layer into the
+    dedicated ``test_transport`` index (scenario-style RAG that can return the
+    geojson layer)."""
+
+    res = await elastic_client.upload_test_transport(
+        TEST_TRANSPORT_INDEX,
+        await docx_file.read(),
+        await geojson_file.read(),
+        dto.doc_name,
+        dto.layer_description,
+        dto.table_context_size,
+        dto.text_questions_num,
+        dto.table_questions_num,
+        dto.geojson_questions_num,
+    )
+    return res
 
 
 @elastic_router.delete("/llm/delete_documents/{index_name}", tags=tag)

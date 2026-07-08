@@ -10,6 +10,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from src.common.config.config import Config
+from src.common.constants.index_mapper import TEST_TRANSPORT_INDEX
 from src.dependencies import http_exception
 from src.llm.llm_service import LlmService
 from src.vectorizer.vectorizer_service import VectorizerService
@@ -38,7 +39,10 @@ class ElasticService:
     async def check_indexes(self):
         for index in self.index_mapper.keys():
             if not self.client.indices.exists(index=index):
-                await self.create_index(self.index_mapper[index], index)
+                if index == TEST_TRANSPORT_INDEX:
+                    await self.create_test_index(index)
+                else:
+                    await self.create_index(self.index_mapper[index], index)
 
     async def update_index_mapper(self, en: str, ru: str):
         self.index_mapper[en] = ru
@@ -189,6 +193,158 @@ class ElasticService:
                 _input={"index_name": index_name},
                 _detail={"error": repr(e)},
             )
+
+    async def create_test_index(self, index_name: str):
+        """Create the test index that stores docx text chunks alongside an
+        optional geojson layer (``feature_collection``). The layer is kept in
+        ``_source`` only (``enabled: False``) so a large FeatureCollection does
+        not trigger a mapping explosion."""
+
+        if self.client.indices.exists(index=index_name):
+            raise http_exception(
+                400,
+                "Index already exists.",
+                _input={"index": index_name},
+                _detail={"existing_indexes": list(self.index_mapper.keys())},
+            )
+        body = {
+            "mappings": {
+                "properties": {
+                    "body_vector": {
+                        "type": "dense_vector",
+                        "dims": 4096,
+                        "index": True,
+                        "similarity": "cosine",
+                    },
+                    "body": {"type": "text"},
+                    "num_id": {"type": "long"},
+                    "doc_name": {
+                        "type": "text",
+                        "fields": {"keywords": {"type": "keyword"}},
+                    },
+                    "feature_collection": {"type": "object", "enabled": False},
+                }
+            }
+        }
+        try:
+            resp = self.client.indices.create(index=index_name, body=body)
+            return resp.raw
+        except Exception as e:
+            raise http_exception(
+                500,
+                "Failed to create test index",
+                _input={"index_name": index_name},
+                _detail={"error": repr(e)},
+            )
+
+    async def upload_test_transport(
+        self,
+        index_name: str,
+        docx_file: bytes,
+        geojson_file: bytes,
+        doc_name: str,
+        layer_description: str,
+        table_context_size: int,
+        text_questions_num: int,
+        table_questions_num: int,
+        geojson_questions_num: int,
+    ):
+        """Load a docx document (plain text/table chunks) and a geojson layer
+        (chunks carrying the whole FeatureCollection) into the test index."""
+
+        if not self.client.indices.exists(index=index_name):
+            await self.create_test_index(index_name)
+
+        documents = []
+        last_id = await self.get_last_index(index_name)
+        logger.info(
+            f"Started uploading test transport data to index {index_name} from id {last_id}"
+        )
+
+        # --- docx: plain text/table chunks, no feature_collection ---
+        full_doc = Document(io.BytesIO(docx_file))
+        dock_blocks = [i for i in doc_parser.iter_contexts_for_vectorization(full_doc)]
+        for index, entity in tqdm(
+            enumerate(dock_blocks), total=len(dock_blocks), desc="Processing docx"
+        ):
+            if entity[1] == "text":
+                docs, last_id = await self.create_paragraph_to_upload(
+                    entity[0], text_questions_num, last_id, doc_name
+                )
+                documents += docs
+            elif entity[1] == "table":
+                try:
+                    table_with_context = (
+                        "\n".join(
+                            [
+                                i[0]
+                                for i in dock_blocks[
+                                    max(index - table_context_size, 0) : index
+                                ]
+                                if i[1] == "text"
+                            ]
+                        ),
+                        entity[0],
+                        "\n".join(
+                            [
+                                i[0]
+                                for i in dock_blocks[index : index + table_context_size]
+                                if i[1] == "text"
+                            ]
+                        ),
+                    )
+                except Exception as e:
+                    logger.exception(e)
+                    raise HTTPException(status_code=500, detail=e.__str__())
+                docs, last_id = await self.create_table_to_upload(
+                    table_with_context, table_questions_num, last_id, doc_name
+                )
+                documents += docs
+
+        # --- geojson: description chunks carrying the whole FeatureCollection ---
+        feature_collection = json.loads(geojson_file)
+        geo_questions = await self.llm_service.generate_text_description(
+            layer_description, geojson_questions_num, True
+        )
+        for question in geo_questions:
+            if not question.strip():
+                continue
+            last_id += 1
+            documents.append(
+                {
+                    "_id": str(last_id),
+                    "num_id": last_id,
+                    "body": layer_description,
+                    "body_vector": self.encode(question),
+                    "doc_name": doc_name,
+                    "feature_collection": feature_collection,
+                }
+            )
+
+        if documents:
+            bulk(self.client, documents, index=index_name, request_timeout=1200)
+            logger.info(
+                f"Uploaded {len(documents)} docs to test transport index {index_name}"
+            )
+        return index_name
+
+    async def search_test(
+        self, embedding: list, index_name: str
+    ) -> list[dict]:
+        """kNN search over the test index returning body text and, where
+        present, the attached geojson layer."""
+
+        query_body = {
+            "knn": {
+                "field": "body_vector",
+                "query_vector": embedding,
+                "k": int(self.config.get("SCENARIO_K")),
+                "num_candidates": int(self.config.get("SCENARIO_NUM_K")),
+            },
+            "_source": ["body", "feature_collection"],
+        }
+        response = self.client.search(index=index_name, body=query_body)
+        return response["hits"]["hits"]
 
     async def delete_index(self, index_name: str):
 
