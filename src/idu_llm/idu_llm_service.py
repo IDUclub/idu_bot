@@ -4,6 +4,7 @@ from typing import AsyncIterator
 import requests
 from loguru import logger
 
+from src.common.constants.index_mapper import TEST_TRANSPORT_INDEX
 from src.common.exceptions.http_exception import http_exception
 from src.elastic.elastic_service import ElasticService
 from src.llm.llm_service import LlmService
@@ -141,6 +142,74 @@ class IduLLMService:
                     chunk = json.loads(chunk)
                     if not chunk["done"]:
                         yield {"type": "text", "chunk": chunk["response"]}
+                    else:
+                        yield False
+
+    async def generate_test_transport_stream_response(
+        self, message_info: BaseLlmRequest
+    ) -> AsyncIterator[str | bool | list | dict]:
+        """Scenario-style RAG over the test transport index: retrieves docx
+        text context and, when a geojson-bearing chunk is matched, yields the
+        isochrone layer before streaming the LLM answer."""
+
+        index_name = TEST_TRANSPORT_INDEX
+        try:
+            embedding = self.vectorizer_model.embed(message_info.user_request)
+            yield {"type": "status", "chunk": "Подготовка контекста"}
+        except Exception as e:
+            logger.error(e)
+            raise http_exception(
+                500,
+                "Error during creating embedding",
+                _input=message_info.user_request,
+                _detail=e.__str__(),
+            )
+        try:
+            hits = await self.elastic_client.search_test(embedding, index_name)
+            yield {"type": "status", "chunk": "Анализ контекста"}
+        except Exception as e:
+            logger.error(e)
+            raise http_exception(
+                500,
+                "Error during extracting elastic document",
+                _input={
+                    "message_info.user_request": message_info.user_request,
+                    "embedding": embedding,
+                },
+                _detail=e.__str__(),
+            )
+
+        context = ";".join([hit["_source"]["body"].rstrip() for hit in hits])
+
+        # Only chunks that carry a feature_collection contribute a layer.
+        # De-duplicate identical layers matched via several question chunks.
+        feature_collections = []
+        seen_layers = set()
+        for hit in hits:
+            fc = hit["_source"].get("feature_collection")
+            if not fc:
+                continue
+            layer_key = fc.get("name") or id(fc)
+            if layer_key in seen_layers:
+                continue
+            seen_layers.add(layer_key)
+            feature_collections.append(fc)
+        yield feature_collections
+
+        headers, data = await self.llm_service.generate_request_data(
+            message_info.user_request, context, True
+        )
+        with requests.post(
+            f"{self.llm_service.url}/api/generate",
+            headers=headers,
+            data=json.dumps(data),
+            stream=True,
+        ) as response:
+            if response.status_code == 200:
+                for chunk in response.iter_content(chunk_size=512 * 1024):
+                    chunk = json.loads(chunk)
+                    if not chunk["done"]:
+                        yield chunk["response"]
                     else:
                         yield False
 
